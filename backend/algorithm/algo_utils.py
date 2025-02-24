@@ -6,7 +6,17 @@ Description: Helper utilities used by recommender algorithm
 """
 
 from backend.models.color import CIELAB
+from backend.models.garment import Garment
+from enum import Enum
+from typing import Dict
 import numpy as np
+
+class GarmType(Enum):
+    SHOES = 0,
+    TOP = 1,
+    PANTS = 2
+
+
 
 def query_weather_api(lat: float, long: float) -> None:
     """
@@ -19,6 +29,7 @@ def query_weather_api(lat: float, long: float) -> None:
     Returns:
     """
     pass
+
 
 def compare_colors(c1: CIELAB, c2: CIELAB) -> float:
     """
@@ -34,3 +45,7 @@ def compare_colors(c1: CIELAB, c2: CIELAB) -> float:
     """
 
     return np.linalg.norm(c1.to_np() - c2.to_np())
+
+
+def compute_ranking(garment: Garment, params: Dict[str, float]) -> float:
+    pass

@@ -9,9 +9,11 @@ Description: Recommender Algorithm pipeline for generating outfits
 
 from backend.models.garment import Garment
 from backend.models.outfit import Outfit
+from typing import Dict, Set
 import algo_utils as utils
 
-def recommend_outfits() -> set[Outfit]:
+
+def recommend_outfits() -> Set[Outfit]:
     """
     Invoked by recommend/ endpoint to generate outfits
     
@@ -22,14 +24,12 @@ def recommend_outfits() -> set[Outfit]:
         set[Outfit]: List of Outfits
     """
 
-    garments = {} # SQL Query
-    filtered = filtering_stage(garments)
+    filtered = filtering_stage()
     ranked = ranking_stage(filtered)
-    matched = matching_stage(ranked)
-    
-    return matched
+    return matching_stage(ranked)
 
-def filtering_stage(garment_set: set[Garment]) -> set[Garment]:
+
+def filtering_stage() -> Dict[str, Set[Garment]]:
     """
     Filters out garments based on weather conditions
     
@@ -40,9 +40,21 @@ def filtering_stage(garment_set: set[Garment]) -> set[Garment]:
         set[Garment]: set of garments filtered by weather suitability
     """
     utils.query_weather_api()
+
+    filtered = {}
+    # Select all shoes for given conditions
+
+    filtered[utils.GarmType.SHOES] = {}
+
+    # Select all pants for given conditions
+    filtered[utils.GarmType.PANTS] = {}
+
+    # Select all tops for given conditions
+    filtered[utils.GarmType.TOP] = {}
     pass
 
-def ranking_stage(filtered_set: set[Garment]) -> set[Garment]:
+
+def ranking_stage(filtered_set: Dict[str, Set[Garment]]) -> Set[Garment]:
     """
     Ranks individual Garments based on custom weighted avg.
     
@@ -54,7 +66,8 @@ def ranking_stage(filtered_set: set[Garment]) -> set[Garment]:
     """
     pass
 
-def matching_stage(ranked_set: set[Garment]) -> set[Garment]:
+
+def matching_stage(ranked_set: Set[Garment]) -> Set[Garment]:
     """
     Forms outfits given the ranked garments.
     

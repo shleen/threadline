@@ -10,6 +10,7 @@ from colormath.color_objects import sRGBColor, LabColor
 from colormath.color_conversions import convert_color 
 import numpy as np
 
+
 @dataclass
 class CIELAB:
     """Dataclass to store colors in CIELAB color space"""
