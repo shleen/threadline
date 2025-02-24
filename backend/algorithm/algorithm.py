@@ -2,15 +2,14 @@
 
 """
 File name: algorithm.py
-Author: Stephen Barstys (sbarstys)
+Author: Stephen Barstys (sbarstys), if you work on this file please add yourself
 Created: 02-13-2025
 Description: Recommender Algorithm pipeline for generating outfits   
 """
 
-from backend.models.garment import Garment
-from backend.models.outfit import Outfit
+from backend.apps.core.models import Clothing
+from backend.apps.core.models import Outfit
 from typing import Dict, Set
-import algo_utils as utils
 
 
 def recommend_outfits() -> Set[Outfit]:
@@ -23,13 +22,12 @@ def recommend_outfits() -> Set[Outfit]:
     Returns: 
         set[Outfit]: List of Outfits
     """
-
     filtered = filtering_stage()
     ranked = ranking_stage(filtered)
     return matching_stage(ranked)
 
 
-def filtering_stage() -> Dict[str, Set[Garment]]:
+def filtering_stage() -> Dict[str, Set[Clothing]]:
     """
     Filters out garments based on weather conditions
     
@@ -39,22 +37,10 @@ def filtering_stage() -> Dict[str, Set[Garment]]:
     Returns: 
         set[Garment]: set of garments filtered by weather suitability
     """
-    utils.query_weather_api()
-
-    filtered = {}
-    # Select all shoes for given conditions
-
-    filtered[utils.GarmType.SHOES] = {}
-
-    # Select all pants for given conditions
-    filtered[utils.GarmType.PANTS] = {}
-
-    # Select all tops for given conditions
-    filtered[utils.GarmType.TOP] = {}
     pass
 
 
-def ranking_stage(filtered_set: Dict[str, Set[Garment]]) -> Set[Garment]:
+def ranking_stage(filtered_set: Dict[str, Set[Clothing]]) -> Set[Clothing]:
     """
     Ranks individual Garments based on custom weighted avg.
     
@@ -67,7 +53,7 @@ def ranking_stage(filtered_set: Dict[str, Set[Garment]]) -> Set[Garment]:
     pass
 
 
-def matching_stage(ranked_set: Set[Garment]) -> Set[Garment]:
+def matching_stage(ranked_set: Set[Clothing]) -> Set[Clothing]:
     """
     Forms outfits given the ranked garments.
     
