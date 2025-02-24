@@ -65,7 +65,9 @@ fastlane/test_output
 **/.vscode/
 **/venv/
 app/buildServer.json
-backend/backend/__pycache__/
+**/__pycache__/
+backend/.env
+
 
 # Virtual Environment directories
 bin/
