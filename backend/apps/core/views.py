@@ -1,11 +1,15 @@
 import boto3
 import time
+import json
 
 from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import JsonResponse
 
 from .decorators import require_method
 from .functions import get_or_create_user
 from .models import Clothing
+
+from algorithm.algorithm import recommend_outfits
 
 IMAGE_BUCKET = "threadline-clothing"
 
@@ -115,3 +119,15 @@ def create_clothing(request):
     item.save()
 
     return HttpResponse(status=200)
+
+
+@require_method('GET')
+def get_recommendations():
+
+    # Run the outfit recommendation pipeline
+    outfits = recommend_outfits()
+
+    # Convert outfits to JSON Array
+    outfits_json = [json.dumps(outfit.__dict__) for outfit in outfits]
+
+    return JsonResponse(outfits_json)
