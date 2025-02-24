@@ -86,10 +86,11 @@ class Clothing(models.Model):
     subtype = models.CharField(
         choices=TopSubtype.choices + BottomSubtype.choices + OuterwearSubtype.choices + DressSubtype.choices + ShoesSubtype.choices,
         blank=True,
+        null=True,
         validators=[validate_subtype]
     )
 
-    img_url = models.URLField()
+    img_filename = models.URLField()
 
     # CIELAB color space color
     color_lstar = models.FloatField()
@@ -101,7 +102,7 @@ class Clothing(models.Model):
     # if true, this item can be worn on top of other items
     layerable = models.BooleanField(default=False)
 
-    precip = models.CharField(choices=Precip, blank=True)
+    precip = models.CharField(choices=Precip, blank=True, null=True)
 
     occasion = models.CharField(choices=Occasion)
 
@@ -109,22 +110,22 @@ class Clothing(models.Model):
 
     created_at = models.DateTimeField(default=timezone.now)
 
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
 
 class Tags(models.Model):
     label = models.CharField(blank=True)
     value = models.CharField()
 
-    clothing_id = models.ForeignKey(Clothing, on_delete=models.CASCADE)
+    clothing = models.ForeignKey(Clothing, on_delete=models.CASCADE)
 
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
 
 class Outfit(models.Model):
     date_worn = models.DateTimeField(default=timezone.now)
 
 class OutfitItem(models.Model):
-    clothing_id = models.ForeignKey(Clothing, on_delete=models.CASCADE)
+    clothing = models.ForeignKey(Clothing, on_delete=models.CASCADE)
 
-    outfit_id = models.ForeignKey(Outfit, on_delete=models.CASCADE)
+    outfit = models.ForeignKey(Outfit, on_delete=models.CASCADE)
