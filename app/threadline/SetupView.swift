@@ -13,7 +13,7 @@ struct SetupView: View {
     @AppStorage("username") private var username: String = ""
     @State private var localUsername = ""
     @State private var validUsername: Bool = true
-    
+
     func validateUsername() {
         // Validate username
         if (localUsername.count < 3 || localUsername.rangeOfCharacter(from: CharacterSet.alphanumerics.inverted) != nil) {
