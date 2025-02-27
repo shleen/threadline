@@ -12,4 +12,3 @@ r2 = boto3.client('s3',
   endpoint_url='https://7b0edb7ebfca88e47f0f02147ca9274e.r2.cloudflarestorage.com',
   region_name='enam'
 )
-

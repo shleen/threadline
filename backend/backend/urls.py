@@ -20,4 +20,5 @@ from apps.core import views
 
 urlpatterns = [
     path('clothing/create', views.create_clothing),
+    path('closet/get', views.get_closet)
 ]
