@@ -1,20 +1,12 @@
-import boto3
 import time
 
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.shortcuts import get_object_or_404
 
 from .decorators import require_method
 from .functions import get_or_create_user
-from .models import Clothing
-
-IMAGE_BUCKET = "threadline-clothing"
-
-# first param here is because boto3 was built for use with AWS S3,
-# and Cloudflare R2 is compatible with many AWS S3 SDKs
-r2 = boto3.client('s3',
-  endpoint_url='https://7b0edb7ebfca88e47f0f02147ca9274e.r2.cloudflarestorage.com',
-  region_name='enam'
-)
+from .images import IMAGE_BUCKET, r2
+from .models import Clothing, User
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -115,3 +107,20 @@ def create_clothing(request):
     item.save()
 
     return HttpResponse(status=200)
+
+@csrf_exempt
+@require_method('GET')
+def get_closet(request):
+    username = request.GET.get('username')
+
+    if username is None:
+        return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
+
+    user = get_object_or_404(User, username=username)
+
+    # TODO: Include tags/ other relevant data
+    clothes = Clothing.objects.filter(user=user).values('id', 'img_filename')
+
+    return JsonResponse({
+        'items': list(clothes)
+    })
