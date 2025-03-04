@@ -1,7 +1,7 @@
-import boto3
 import time
 import json
 
+<<<<<<< HEAD
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.http import JsonResponse
 
@@ -19,6 +19,15 @@ r2 = boto3.client('s3',
   endpoint_url='https://7b0edb7ebfca88e47f0f02147ca9274e.r2.cloudflarestorage.com',
   region_name='enam'
 )
+=======
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.shortcuts import get_object_or_404
+
+from .decorators import require_method
+from .functions import get_or_create_user
+from .images import IMAGE_BUCKET, r2
+from .models import Clothing, User
+>>>>>>> main
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -120,6 +129,7 @@ def create_clothing(request):
 
     return HttpResponse(status=200)
 
+<<<<<<< HEAD
 
 @require_method('GET')
 def get_recommendations():
@@ -131,3 +141,21 @@ def get_recommendations():
     outfits_json = [json.dumps(outfit.__dict__) for outfit in outfits]
 
     return JsonResponse(outfits_json)
+=======
+@csrf_exempt
+@require_method('GET')
+def get_closet(request):
+    username = request.GET.get('username')
+
+    if username is None:
+        return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
+
+    user = get_object_or_404(User, username=username)
+
+    # TODO: Include tags/ other relevant data
+    clothes = Clothing.objects.filter(user=user).values('id', 'img_filename')
+
+    return JsonResponse({
+        'items': list(clothes)
+    })
+>>>>>>> main

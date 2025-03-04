@@ -20,5 +20,9 @@ from apps.core import views
 
 urlpatterns = [
     path('clothing/create', views.create_clothing),
+<<<<<<< HEAD
     path('recommendation/get', views.recommend_outfits)
+=======
+    path('closet/get', views.get_closet)
+>>>>>>> main
 ]

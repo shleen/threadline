@@ -1,6 +1,10 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.utils import timezone
+
+from .images import IMAGE_BUCKET, r2
 
 class User(models.Model):
     username = models.CharField(unique=True)
@@ -129,3 +133,10 @@ class OutfitItem(models.Model):
     clothing = models.ForeignKey(Clothing, on_delete=models.CASCADE)
 
     outfit = models.ForeignKey(Outfit, on_delete=models.CASCADE)
+
+
+### Signal handlers
+@receiver(post_delete, sender=Clothing)
+def clothing_post_delete(sender, instance, **kwargs):
+        # Also delete relevant image from r2 to prevent orphaned data
+        r2.delete_object(Bucket=IMAGE_BUCKET, Key=instance.img_filename)
