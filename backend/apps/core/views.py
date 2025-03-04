@@ -8,7 +8,6 @@ from .decorators import require_method
 from .functions import get_or_create_user
 from .images import IMAGE_BUCKET, r2
 from .models import Clothing, User
-
 from algorithm.algorithm import recommend_outfits
 
 from django.views.decorators.csrf import csrf_exempt
@@ -138,4 +137,3 @@ def get_recommendations():
     outfits_json = [json.dumps(outfit.__dict__) for outfit in outfits]
 
     return JsonResponse(outfits_json)
->>>>>>> 8a3f5cb (Created view for recommendation)
