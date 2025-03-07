@@ -11,6 +11,7 @@ struct HomeView: View {
     @AppStorage("username") private var username: String = ""
 
     @State private var isPresentingLogOutfitView: Bool = false
+    @State private var isPresentingWardrobeView: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -27,10 +28,20 @@ struct HomeView: View {
             }
             .buttonStyle(.borderedProminent)
             .padding(.top, 4)
+            Button(action: { isPresentingWardrobeView.toggle() }) {
+                Text("Wardrobe")
+                    .font(.system(size: 16, weight: .regular))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.top, 4)
         }
         .padding(.horizontal, 16)
         .navigationDestination(isPresented: $isPresentingLogOutfitView) {
             LogOutfitView(isPresented: $isPresentingLogOutfitView)
+        }
+        .navigationDestination(isPresented: $isPresentingWardrobeView) {
+            WardrobeView()
         }
     }
 }
