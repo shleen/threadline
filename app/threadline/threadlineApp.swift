@@ -11,6 +11,8 @@ import SwiftUI
 struct threadlineApp: App {
     @AppStorage("username") private var username: String = ""
 
+    @State private var urlStore = UrlStore()
+
     var body: some Scene {
         WindowGroup {
             // Check if username has been set. If yes, proceed to home
@@ -25,5 +27,6 @@ struct threadlineApp: App {
                 }
             }
         }
+        .environment(urlStore)
     }
 }
