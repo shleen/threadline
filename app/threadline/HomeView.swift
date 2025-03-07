@@ -38,7 +38,7 @@ struct HomeView: View {
         }
         .padding(.horizontal, 16)
         .navigationDestination(isPresented: $isPresentingLogOutfitView) {
-            LogOutfitView(isPresented: $isPresentingLogOutfitView)
+            LogOutfitView(isPresented: $isPresentingLogOutfitView, items: [])
         }
         .navigationDestination(isPresented: $isPresentingWardrobeView) {
             WardrobeView()

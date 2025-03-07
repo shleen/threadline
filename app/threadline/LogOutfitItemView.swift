@@ -10,15 +10,29 @@ import SwiftUI
 struct LogOutfitItemView: View {
     @Binding var selectedItems: Set<Int>
 
-    let size: Double
-    let item: LogOutfitItem
+    @Environment(UrlStore.self) private var urlStore
 
     @State private var isSelected = false
 
+    let size: Double = 64
+    let item: LogOutfitItem
+
     var body: some View {
         VStack() {
-            Text(item.item)
-                .frame(width: size, height: size)
+            AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img_filename)")) { phase in
+                if let image = phase.image {
+                    image
+                        .resizable()
+                        .scaledToFill()
+                } else if phase.error != nil {
+                    Color.red // display an error placeholder
+                } else {
+                    ProgressView()
+                }
+            }
+            .frame(width: size, height: size)
+            .clipped()
+
             HStack() {
                 Spacer()
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
