@@ -5,7 +5,7 @@ from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 
 from .decorators import require_method
-from .functions import get_or_create_user
+from .functions import get_or_create_user, filter_and_rank, item_match
 from .images import IMAGE_BUCKET, r2
 from .models import Clothing, User
 from algorithm.algorithm import recommend_outfits
@@ -127,13 +127,22 @@ def get_closet(request):
         'items': list(clothes)
     })
 
+@csrf_exempt
 @require_method('GET')
-def get_recommendations():
+def get_recommendations(request):
+    username = request.GET.get('username')
 
-    # Run the outfit recommendation pipeline
-    outfits = recommend_outfits()
+    if username is None:
+        return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
 
-    # Convert outfits to JSON Array
-    outfits_json = [json.dumps(outfit.__dict__) for outfit in outfits]
+    # Weather Filtering API Call Here
+    is_winter = True # please set to either True or False
+    precip = None # please set to None, "RAIN", or "SNOW"
 
-    return JsonResponse(outfits_json)
+    context = { "username": username, "iswinter": is_winter, "precip": precip }
+    clothes = filter_and_rank(context)
+    matched = item_match(clothes)
+
+    return JsonResponse({
+        "outfits": matched
+    })
