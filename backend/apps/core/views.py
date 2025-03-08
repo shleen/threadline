@@ -1,5 +1,4 @@
 import time
-import json
 
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
