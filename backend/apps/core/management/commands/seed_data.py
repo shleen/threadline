@@ -65,7 +65,7 @@ class Command(BaseCommand):
         precips = [None, Clothing.Precip.RAIN, Clothing.Precip.SNOW]
 
         for user in [user1, user2]:
-            for i in range(10):
+            for i in range(100):
                 ctype, subtype = random.choice(clothing_types)
                 color_l = random.uniform(0, 100)
                 color_a = random.uniform(-128, 128)
