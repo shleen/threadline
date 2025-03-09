@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from .decorators import require_method
 from .functions import get_or_create_user, filter_and_rank, item_match, pull_past_outfits
 from .images import IMAGE_BUCKET, r2
-from .models import Clothing, User
+from .models import Clothing, User, Tags
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -118,8 +118,25 @@ def get_closet(request):
 
     user = get_object_or_404(User, username=username)
 
-    # TODO: Include tags/ other relevant data
-    clothes = Clothing.objects.filter(user=user).values('id', 'img_filename')
+    # Get all clothing items and include their tags
+    clothes = Clothing.objects.filter(user=user).values(
+        'id', 
+        'type',
+        'subtype',
+        'img_filename',
+        'color_lstar',
+        'color_astar',
+        'color_bstar',
+        'fit',
+        'layerable',
+        'precip',
+        'occasion',
+        'winter',
+        'created_at'
+    )
+
+    for item in clothes:
+        item['tags'] = list(Tags.objects.filter(clothing_id=item['id']).values('label', 'value'))
 
     return JsonResponse({
         'items': list(clothes)
