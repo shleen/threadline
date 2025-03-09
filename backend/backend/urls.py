@@ -21,5 +21,6 @@ from apps.core import views
 urlpatterns = [
     path('clothing/create', views.create_clothing),
     path('closet/get', views.get_closet),
-    path('recommendation/get', views.get_recommendations)
+    path('recommendation/get', views.get_recommendations),
+    path('outfits/get', views.get_prev_outfits)
 ]
