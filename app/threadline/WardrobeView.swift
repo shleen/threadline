@@ -9,7 +9,8 @@ import SwiftUI
 
 struct WardrobeView: View {
     //Todo get images from backend using database
-    let images = ["image1", "image2", "image3", "image4", "image5", "image6"]
+    //let images = ["image1", "image2", "image3", "image4", "image5", "image6"]
+    let images = ["Example", "Sweats", "Example", "Example", "Example"]
     
     let columns = [
         GridItem(.flexible()),
@@ -17,28 +18,37 @@ struct WardrobeView: View {
         GridItem(.flexible())
     ]
     
+    @State private var selectedTab = "All"
+    let tabs = ["All", "Tagged", "Recent Outfits"]
+    
     var body: some View {
         //View of outfits in a 3 column view
-        //Todo add more styling later
-        //TODO add ability to tap specific outfits to see details
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 10) {
-                ForEach(images, id: \..self) { image in
-                    Image(image)
-                        .resizable()
-                        .aspectRatio(1, contentMode: .fill)
-                        .frame(width: 100, height: 100)
-                        .clipped()
-                        .cornerRadius(10)
+        //TODO Change images presented based on the tab
+        VStack {
+            //Header with tabs
+            Picker("Select Tab", selection: $selectedTab) {
+                ForEach(tabs, id: \..self) { tab in
+                    Text(tab).tag(tab)
                 }
             }
-            .padding()
+            .pickerStyle(SegmentedPickerStyle())
+            .padding(.horizontal)
+            .background(Color.blue)
+            .foregroundColor(.white)
+            
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(images, id: \..self) { image in
+                        Image(image)
+                            .resizable()
+                            .aspectRatio(1, contentMode: .fill)
+                            .frame(width: 100, height: 100)
+                            .clipped()
+                            .cornerRadius(10)
+                    }
+                }
+                .padding()
+            }
         }
-    }
-}
-
-struct WardrobeView_Previews: PreviewProvider {
-    static var previews: some View {
-        WardrobeView()
     }
 }
