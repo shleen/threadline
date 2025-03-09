@@ -4,7 +4,7 @@ from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 
 from .decorators import require_method
-from .functions import get_or_create_user, filter_and_rank, item_match
+from .functions import get_or_create_user, filter_and_rank, item_match, pull_past_outfits
 from .images import IMAGE_BUCKET, r2
 from .models import Clothing, User
 
@@ -143,4 +143,16 @@ def get_recommendations(request):
 
     return JsonResponse({
         "outfits": matched
+    })
+
+@csrf_exempt
+@require_method('GET')
+def get_prev_outfits(request):
+    username = request.GET.get('username')
+
+    if username is None:
+        return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
+
+    return JsonResponse({
+        "outfits": pull_past_outfits({ "username": username })
     })
