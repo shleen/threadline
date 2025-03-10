@@ -19,7 +19,7 @@ struct WardrobeView: View {
     ]
     
     @State private var selectedTab = "All"
-    let tabs = ["All", "Tagged", "Recent Outfits"]
+    let tabs = ["All", "Tagged"]
     
     var body: some View {
         //View of outfits in a 3 column view
@@ -33,7 +33,7 @@ struct WardrobeView: View {
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal)
-            .background(Color.blue)
+            .background(Color.gray)
             .foregroundColor(.white)
             
             ScrollView {
