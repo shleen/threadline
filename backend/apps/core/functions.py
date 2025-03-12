@@ -77,7 +77,7 @@ def pull_past_outfits(context):
         outfit[rec["type"]] = {"clothing_id": rec["clothing_id"], "img": rec["img_filename"]}
         outfit_dict[outfit_id] = outfit
 
-    return sorted(list(outfit_dict.values()), key=lambda outfit: outfit["timestamp"])
+    return sorted(list(outfit_dict.values()), key=lambda outfit: outfit["timestamp"], reverse=True)
 
 
 
