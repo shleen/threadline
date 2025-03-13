@@ -35,6 +35,118 @@ def prev_outfit_query():
     """
 
 
+def utilization_query():
+    """
+    Returns a query that computes the total percent utilization of 
+    the wardrobe, and utilization for each type of clothing that has
+    been worn.
+    """
+    return """
+    WITH 
+    WORN_CLOTHES AS (
+        SELECT C.id, C.type, C.img_filename, I.outfit_id
+        FROM core_clothing C
+            JOIN core_outfititem I
+            ON C.id = I.clothing_id
+            JOIN core_outfit O
+            ON O.id = I.outfit_id
+        JOIN core_user U
+            ON C.user_id = U.id
+        WHERE O.date_worn >= date_trunc('day', NOW() - interval '1 month')
+        AND U.username = %s
+    ),
+    DISTINCT_COUNTS AS (
+        SELECT CAST(COUNT(*) AS FLOAT) AS counts, W.type
+        FROM (
+            SELECT DISTINCT id, type 
+            FROM WORN_CLOTHES
+        ) W
+        GROUP BY W.type
+    )
+
+    (SELECT 'TOTAL' AS util_type,
+        CASE
+            WHEN (SELECT COUNT(*) FROM core_clothing) = 0 THEN 0.0
+            ELSE ROUND(SUM(D.counts)::numeric / (SELECT COUNT(*) FROM core_clothing), 2)
+        END AS percent
+        FROM DISTINCT_COUNTS D)
+    UNION ALL
+    (SELECT D.type AS util_type,
+        CASE 
+            WHEN (SELECT COUNT(*) FROM core_clothing WHERE type = D.type) = 0 THEN 0.0
+            ELSE ROUND(D.counts::numeric / (SELECT COUNT(*) FROM core_clothing WHERE type = D.type), 2)
+        END AS percent
+        FROM DISTINCT_COUNTS D);
+    """
+
+
+def rewears_query():
+    """
+    Raw SQL query to find the items that were reworn (i.e., worn more than once)
+    the most in the last month
+    """
+    return """
+    WITH
+    REWORN_CLOTHES AS (
+        SELECT COUNT(*) AS wears, W.id, W.type, W.img_filename
+        FROM (
+            SELECT C.id, C.type, C.img_filename
+            FROM core_clothing C
+            JOIN core_outfititem I
+                ON C.id = I.clothing_id
+            JOIN core_outfit O
+                ON O.id = I.outfit_id
+            JOIN core_user U
+                ON U.id = C.user_id
+            WHERE O.date_worn >= date_trunc('day', NOW() - interval '1 month')
+            AND U.username = %s
+        ) W
+        GROUP BY W.id, W.type, W.img_filename
+            HAVING COUNT(*) > 1
+    )
+
+    (SELECT R.id, R.type, R.img_filename, R.wears
+        FROM REWORN_CLOTHES R
+        WHERE R.type = 'TOP'
+        AND R.wears = (
+        SELECT MAX(wears)
+        FROM REWORN_CLOTHES
+        WHERE type = 'TOP'))
+    UNION ALL
+    (SELECT R.id, R.type, R.img_filename, R.wears
+        FROM REWORN_CLOTHES R
+        WHERE R.type = 'BOTTOM'
+        AND R.wears = (
+        SELECT MAX(wears)
+        FROM REWORN_CLOTHES
+        WHERE type = 'BOTTOM'))
+    UNION ALL
+    (SELECT R.id, R.type, R.img_filename, R.wears
+        FROM REWORN_CLOTHES R
+        WHERE R.type = 'OUTERWEAR'
+        AND R.wears = (
+        SELECT MAX(wears)
+        FROM REWORN_CLOTHES
+        WHERE type = 'OUTERWEAR'))
+    UNION ALL
+    (SELECT R.id, R.type, R.img_filename, R.wears
+        FROM REWORN_CLOTHES R
+        WHERE R.type = 'DRESS'
+        AND R.wears = (
+        SELECT MAX(wears)
+        FROM REWORN_CLOTHES
+        WHERE type = 'DRESS'))	 
+    UNION ALL
+    (SELECT R.id, R.type, R.img_filename, R.wears
+        FROM REWORN_CLOTHES R
+        WHERE R.type = 'SHOES'
+        AND R.wears = (
+        SELECT MAX(wears)
+        FROM REWORN_CLOTHES
+        WHERE type = 'SHOES'))
+    """
+
+
 def ranking_query(context):
     """
     Returns the query to perform item ranking.
