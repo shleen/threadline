@@ -22,5 +22,6 @@ urlpatterns = [
     path('clothing/create', views.create_clothing),
     path('closet/get', views.get_closet),
     path('recommendation/get', views.get_recommendations),
-    path('outfits/get', views.get_prev_outfits)
+    path('outfits/get', views.get_prev_outfits),
+    path('utilization/get', views.get_utilization)
 ]

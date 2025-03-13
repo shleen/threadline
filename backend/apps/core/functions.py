@@ -1,7 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
 
 from .models import User
-from .queries import execute_read_query, ranking_query, prev_outfit_query
+from .queries import *
 
 
 def get_or_create_user(username):
@@ -80,4 +80,39 @@ def pull_past_outfits(context):
     return sorted(list(outfit_dict.values()), key=lambda outfit: outfit["timestamp"], reverse=True)
 
 
+def compute_utilization(context):
+    """
+    Computes total wardrobe utilization and utilization percentage for
+    each type of clothing that has been worn within the past month
+    """
+    utilization = execute_read_query(utilization_query(), [context["username"]])
 
+    util_dict = {k: None for k in ["TOTAL", "TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]}
+    
+    # Map returned percentages to utilization dictionary
+    for util in utilization:
+        util_dict[util["util_type"]] = util["percent"]
+
+    return util_dict
+
+
+def compute_rewears(context):
+    """
+    Pull which items of clothing were reworn (i.e., worn more than once)
+    the most in the last month
+    """
+    rewears = execute_read_query(rewears_query(), [context["username"]])
+
+    # For each type that has rewears, build a list of clothing item JSONs
+    rewear_dict = {k: None for k in ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]}
+    for rewear in rewears:
+        key = rewear["type"]
+        rewear.pop("type")
+
+        if rewear_dict[key] is None:
+           rewear_dict[key] = [rewear]
+           continue
+
+        rewear_dict[key].append(rewear) 
+        
+    return rewear_dict
