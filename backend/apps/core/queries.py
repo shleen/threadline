@@ -43,17 +43,21 @@ def utilization_query():
     """
     return """
     WITH 
-    WORN_CLOTHES AS (
-        SELECT C.id, C.type, C.img_filename, I.outfit_id
+    USER_CLOTHES AS (
+        SELECT C.id, C.type, C.img_filename
         FROM core_clothing C
-            JOIN core_outfititem I
-            ON C.id = I.clothing_id
-            JOIN core_outfit O
-            ON O.id = I.outfit_id
         JOIN core_user U
             ON C.user_id = U.id
+        WHERE U.username = %s
+    ),
+    WORN_CLOTHES AS (
+        SELECT U.id, U.type, U.img_filename, I.outfit_id
+        FROM USER_CLOTHES U
+            JOIN core_outfititem I
+            ON U.id = I.clothing_id
+            JOIN core_outfit O
+            ON O.id = I.outfit_id
         WHERE O.date_worn >= date_trunc('day', NOW() - interval '1 month')
-        AND U.username = %s
     ),
     DISTINCT_COUNTS AS (
         SELECT CAST(COUNT(*) AS FLOAT) AS counts, W.type
@@ -66,15 +70,15 @@ def utilization_query():
 
     (SELECT 'TOTAL' AS util_type,
         CASE
-            WHEN (SELECT COUNT(*) FROM core_clothing) = 0 THEN 0.0
-            ELSE ROUND(SUM(D.counts)::numeric / (SELECT COUNT(*) FROM core_clothing), 2)
+            WHEN (SELECT COUNT(*) FROM USER_CLOTHES) = 0 THEN 0.0
+            ELSE ROUND(SUM(D.counts)::numeric / (SELECT COUNT(*) FROM USER_CLOTHES), 2)
         END AS percent
         FROM DISTINCT_COUNTS D)
     UNION ALL
     (SELECT D.type AS util_type,
         CASE 
-            WHEN (SELECT COUNT(*) FROM core_clothing WHERE type = D.type) = 0 THEN 0.0
-            ELSE ROUND(D.counts::numeric / (SELECT COUNT(*) FROM core_clothing WHERE type = D.type), 2)
+            WHEN (SELECT COUNT(*) FROM USER_CLOTHES WHERE type = D.type) = 0 THEN 0.0
+            ELSE ROUND(D.counts::numeric / (SELECT COUNT(*) FROM USER_CLOTHES WHERE type = D.type), 2)
         END AS percent
         FROM DISTINCT_COUNTS D);
     """
