@@ -51,7 +51,7 @@ def item_match(ranked):
                 outfit[k] = None
                 continue
             garment = queue.pop()
-            outfit[k] = {"id": garment["cloth_id"], "img": garment["img_filename"]}
+            outfit[k] = {"id": garment["id"], "img": garment["img_filename"]}
 
         outfits.append(outfit)
 

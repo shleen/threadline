@@ -158,176 +158,194 @@ def ranking_query(context):
     precip_where = "AND 1=0" if context["precip"] is None else "AND precip = " + "\'" + context["precip"] + "\'"
 
     return f"""
-        WITH 
-        USER_CLOTHES AS (
-            SELECT *, C.id AS cloth_id
-            FROM core_clothing C
-            JOIN core_user U
-                ON C.user_id = U.id
-            WHERE U.username = %s
-        ),
-        GARMENTS AS (
-            SELECT *
-            FROM USER_CLOTHES U
-            LEFT JOIN core_outfititem O
-                ON U.cloth_id = O.clothing_id
-            WHERE U.winter IS {"TRUE" if context["iswinter"] else "NOT TRUE"}
-        ),
-        COUNTS_GARMENTS AS (
-            SELECT CAST(COUNT(*) AS FLOAT) AS count, T1.subtype AS attribute, T1.type AS type
-                FROM GARMENTS T1
-                WHERE T1.outfit_id IS NOT NULL
-            GROUP BY T1.subtype, T1.type
-            UNION ALL
-            SELECT CAST(COUNT(*) AS FLOAT) AS count, T2.fit AS attribute, T2.type AS type
-                FROM GARMENTS T2
-                WHERE T2.outfit_id IS NOT NULL
-            GROUP BY T2.fit, T2.type
-            UNION ALL 
-            SELECT CAST(COUNT(*) AS FLOAT) AS count, T3.occasion AS attribute, T3.type AS type
-                FROM GARMENTS T3
-                WHERE T3.outfit_id IS NOT NULL
-            GROUP BY T3.occasion, T3.type
-        ),
-        WEAR_COUNTS_GARMENTS AS (
-            SELECT (-1 / (CAST(COUNT(*) AS FLOAT) + 2)) + 0.5 AS num_wear_weight, C.id
-            FROM core_outfititem O
-            JOIN core_clothing C
-                ON O.clothing_id = C.id
-            GROUP BY C.id
-        ),
-        WEIGHTS_GARMENTS AS (
-            SELECT *,
-            CASE
-                WHEN (SELECT COUNT(*) FROM GARMENTS WHERE type = C.type AND outfit_id IS NOT NULL) = 0 THEN 0.0
-                ELSE C.count / (SELECT COUNT(*) FROM GARMENTS WHERE type = C.type AND outfit_id IS NOT NULL)
-            END weight
-            FROM COUNTS_GARMENTS C
-        ),
-        WEIGHTED AS (
-            SELECT T.cloth_id, T.outfit_id, T.type, T.fit, T.subtype, T.occasion, T.img_filename,
-                T.color_lstar, T.color_astar, T.color_bstar, T.layerable, T.precip,
-            CASE
-                WHEN W1.weight IS NULL THEN 0.0
-                ELSE W1.weight
-            END sub_type_weight,
-            CASE 
-                WHEN W2.weight IS NULL THEN 0.0
-                ELSE W2.weight
-            END fit_weight,
-            CASE 
-                WHEN W3.weight IS NULL THEN 0.0
-                ELSE W3.weight
-            END occasion_weight
-            FROM GARMENTS T
-            LEFT JOIN WEIGHTS_GARMENTS W1
-                ON (W1.attribute = T.subtype AND W1.type = T.type)
-            LEFT JOIN WEIGHTS_GARMENTS W2
-                ON (W2.attribute = T.fit AND W2.type = T.type)
-            LEFT JOIN WEIGHTS_GARMENTS W3
-                ON (W3.attribute = T.occasion AND W3.type = T.type)
-        ),
-        TIMED AS (
-            SELECT *, 
-            CASE
-                WHEN (SELECT COUNT(*) FROM WEIGHTED) = 0 THEN 0.0
-                WHEN O.date_worn IS NULL THEN 0.0
-                ELSE 10 / EXTRACT(EPOCH FROM (NOW() - O.date_worn))
-            END time_const,
-            CASE
-                WHEN C.num_wear_weight IS NULL THEN 0.0
-                ELSE C.num_wear_weight
-            END wear_weight
-            FROM WEIGHTED W
-            LEFT JOIN core_outfit O
-                ON W.outfit_id = O.id
-            LEFT JOIN WEAR_COUNTS_GARMENTS C
-                    ON W.cloth_id = C.id
-        ),
-        RANKED_TOPS AS (
-            (SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip,
-                fit_weight + sub_type_weight + occasion_weight + random() * 0.3 - time_const - wear_weight AS score
-                FROM TIMED
-                WHERE type = 'TOP'
-            ORDER BY score DESC
-                LIMIT 5)
-                UNION
-            (SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip, 0.0 AS score
-                FROM USER_CLOTHES
-                WHERE type = 'TOP'
-                {precip_where}
-                LIMIT 2)
-        ),
-        RANKED_BOTTOMS AS (
-            (SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip,
-                fit_weight + sub_type_weight + occasion_weight + random() * 0.3 - time_const - wear_weight AS score
-                FROM TIMED
-                WHERE type = 'BOTTOM'
-            ORDER BY score DESC
-                LIMIT 5)
-                UNION
-            (SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip, 0.0 AS score
-                FROM USER_CLOTHES
-                WHERE type = 'BOTTOM'
-                {precip_where}
-                LIMIT 2)
-        ),
-        RANKED_OUTERWEAR AS (
-            (SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip,
-                fit_weight + sub_type_weight + occasion_weight + random() * 0.3 - time_const - wear_weight AS score
-                FROM TIMED
-                WHERE type = 'OUTERWEAR'
-            ORDER BY score DESC
-                LIMIT 5)
-                UNION
-            (SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip, 0.0 AS score
-                FROM USER_CLOTHES
-                WHERE type = 'OUTERWEAR'
-                {precip_where}
-                LIMIT 2)
-                
-        ),
-        RANKED_DRESSES AS (
-            (SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip,
-                fit_weight + sub_type_weight + occasion_weight + random() * 0.3 - time_const - wear_weight AS score
-                FROM TIMED
-                WHERE type = 'DRESS'
-            ORDER BY score DESC
-                LIMIT 5)
-                UNION
-            (SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip, 0.0 AS score
-                FROM USER_CLOTHES
-                WHERE type = 'DRESS'
-                {precip_where}
-                LIMIT 2)
-        ),
-        RANKED_SHOES AS (
-            (SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip,
-                fit_weight + sub_type_weight + occasion_weight + random() * 0.3 - time_const - wear_weight AS score
-                FROM TIMED
-                WHERE type = 'SHOES'
-            ORDER BY score DESC
-                LIMIT 5)
-                UNION
-            (SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip, 0.0 AS score
-                FROM USER_CLOTHES
-                WHERE type = 'SHOES'
-                {precip_where}
-                LIMIT 2)
-        )
+    WITH 
+    USER_CLOTHES AS (
+        SELECT C.id, C.type, C.subtype, C.fit, C.occasion, C.img_filename,
+               C.color_lstar, C.color_astar, C.color_bstar, C.layerable, C.precip
+          FROM core_clothing C
+          JOIN core_user U
+            ON C.user_id = U.id
+         WHERE U.username = %s
+           AND C.winter IS {"TRUE" if context["iswinter"] else "NOT TRUE"}
+    ),
+    WORN_CLOTHES AS (
+        SELECT U.id, U.type, U.subtype, U.fit, U.occasion
+          FROM USER_CLOTHES U
+          JOIN core_outfititem I
+            ON U.id = I.clothing_id
+          JOIN core_outfit O
+            ON O.id = I.outfit_id
+    ),
+    SUBTYPE_GROUPING AS (
+        SELECT CAST(COUNT(*) AS FLOAT) AS counts, W.subtype AS subtype, W.type AS type
+          FROM WORN_CLOTHES W
+      GROUP BY W.subtype, W.type
+    ),
+    SUBTYPE_WEIGHTS AS (
+        SELECT 	counts /
+            (SELECT SUM(counts)
+               FROM SUBTYPE_GROUPING S2
+              WHERE S2.type = S1.type) / 3
+            AS weight, S1.type, S1.subtype
+          FROM SUBTYPE_GROUPING S1
+    ),
+    FIT_GROUPING AS (
+        SELECT CAST(COUNT(*) AS FLOAT) AS counts, W.fit AS fit, W.type AS type
+          FROM WORN_CLOTHES W
+      GROUP BY W.fit, W.type
+    ),
+    FIT_WEIGHTS AS (
+        SELECT 	counts /
+            (SELECT SUM(counts)
+               FROM FIT_GROUPING F2
+              WHERE F2.type = F1.type) / 3
+            AS weight, F1.type, F1.fit
+          FROM FIT_GROUPING F1
+    ),
+    OCCASION_GROUPING AS (
+        SELECT CAST(COUNT(*) AS FLOAT) AS counts, W.occasion AS occasion, W.type AS type
+          FROM WORN_CLOTHES W
+      GROUP BY W.occasion, W.type
+    ),
+    OCCASION_WEIGHTS AS (
+        SELECT 	counts /
+            (SELECT SUM(counts)
+               FROM OCCASION_GROUPING O2
+              WHERE O2.type = O1.type) / 3
+            AS weight, O1.type, O1.occasion
+          FROM OCCASION_GROUPING O1
+    ),
+    WEAR_TIMES AS (
+        SELECT MAX(date_worn) AS recent_date, I.clothing_id
+          FROM core_outfititem I
+          JOIN core_outfit O
+            ON I.outfit_id = O.id
+      GROUP BY I.clothing_id
+    ),
+    TIME_DEDUCTIONS AS (
+        SELECT clothing_id,
+          CASE
+              WHEN recent_date >= date_trunc('day', NOW() - interval '3' day) THEN 0.25
+              WHEN recent_date < date_trunc('day', NOW() - interval '3' day)
+              AND recent_date >= date_trunc('day', NOW() - interval '10' day) THEN 0.75
+              ELSE 1.0
+           END AS time_deduct
+          FROM WEAR_TIMES
+    ),
+    WEIGHTED_CLOTHES AS (
+        SELECT U.id, U.type, U.subtype, U.fit, U.occasion, U.img_filename, 
+            U.color_lstar, U.color_astar, U.color_bstar, U.layerable, U.precip,
+          CASE 
+              WHEN S.weight IS NULL THEN 0.0
+              ELSE S.weight
+           END AS subtype_weight,
+          CASE 
+              WHEN F.weight IS NULL THEN 0.0
+              ELSE F.weight
+           END AS fit_weight,
+          CASE 
+              WHEN O.weight IS NULL THEN 0.0
+              ELSE O.weight
+           END AS occasion_weight,
+          CASE 
+              WHEN T.time_deduct IS NULL THEN 1.0
+              ELSE T.time_deduct
+           END AS time_deduct
+          FROM USER_CLOTHES U
+     LEFT JOIN SUBTYPE_WEIGHTS S
+            ON (S.subtype IS NULL AND U.subtype IS NULL AND S.type = U.type)
+            OR (S.subtype = U.subtype AND S.type = U.type)
+     LEFT JOIN FIT_WEIGHTS F
+            ON F.fit = U.fit
+           AND F.type = U.type
+     LEFT JOIN OCCASION_WEIGHTS O
+            ON O.occasion = U.occasion
+           AND O.type = U.type
+     LEFT JOIN TIME_DEDUCTIONS T
+            ON T.clothing_id = U.id
+    ),
+    SCORED AS (
+        SELECT *, time_deduct * (subtype_weight + fit_weight + occasion_weight) + random() * 0.05 AS score
+          FROM WEIGHTED_CLOTHES
+    ),
+    RANKED_TOPS AS (
+        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+           FROM SCORED
+          WHERE type = 'TOP'
+       ORDER BY score DESC
+          LIMIT 5)
+            UNION
+        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+           FROM USER_CLOTHES
+          WHERE type = 'TOP'
+          {precip_where} 
+          LIMIT 1)
+    ),
+    RANKED_BOTTOMS AS (
+        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+           FROM SCORED
+          WHERE type = 'BOTTOM'
+       ORDER BY score DESC
+          LIMIT 5)
+            UNION
+        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+           FROM USER_CLOTHES
+          WHERE type = 'BOTTOM'
+          {precip_where}
+          LIMIT 1)
+    ),
+    RANKED_OUTERWEAR AS (
+        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+           FROM SCORED
+          WHERE type = 'OUTERWEAR'
+       ORDER BY score DESC
+          LIMIT 5)
+            UNION
+        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+           FROM USER_CLOTHES
+          WHERE type = 'OUTERWEAR'
+          {precip_where}
+          LIMIT 1)
+    ),
+    RANKED_DRESSES AS (
+        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+           FROM SCORED
+          WHERE type = 'DRESS'
+       ORDER BY score DESC
+          LIMIT 5)
+            UNION
+        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+           FROM USER_CLOTHES
+          WHERE type = 'DRESS'
+          {precip_where}
+           LIMIT 1)
+    ),
+    RANKED_SHOES AS (
+        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+           FROM SCORED
+          WHERE type = 'SHOES'
+       ORDER BY score DESC
+          LIMIT 5)
+            UNION
+        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+           FROM USER_CLOTHES
+          WHERE type = 'SHOES'
+          {precip_where}
+          LIMIT 1)
+    )
 
-        SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, score
-            FROM RANKED_TOPS
-        UNION ALL
-        SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, score
-            FROM RANKED_BOTTOMS
-        UNION ALL
-        SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, score
-            FROM RANKED_OUTERWEAR
-        UNION ALL
-        SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, score
-            FROM RANKED_DRESSES
-        UNION ALL
-        SELECT cloth_id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, score
-            FROM RANKED_SHOES;
-           """
+       SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit
+         FROM RANKED_TOPS
+    UNION ALL
+       SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit
+         FROM RANKED_BOTTOMS
+    UNION ALL
+       SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit
+         FROM RANKED_OUTERWEAR
+    UNION ALL
+       SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit
+         FROM RANKED_DRESSES
+    UNION ALL
+       SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit
+        FROM RANKED_SHOES;
+    """
