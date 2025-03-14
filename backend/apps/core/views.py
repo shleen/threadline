@@ -1,4 +1,5 @@
 import time
+import boto3
 
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -63,7 +64,8 @@ def create_clothing(request):
     # TODO: process tags
     # tags is optional
     if "tags" in fields:
-        pass
+        for tag in fileds:
+            pass
 
     ## Process & upload image to Cloudflare R2
     # Validate filetype
@@ -73,6 +75,7 @@ def create_clothing(request):
         return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png, jpeg). Please try again.")
 
     # TODO: Compress image
+    image:UploadedFile = compress_image(image)
 
     # Limit image size to 10MB
     if image.size > 10**6:
@@ -82,8 +85,6 @@ def create_clothing(request):
     color_lstar = 0.0
     color_astar = 0.0
     color_bstar = 0.0
-
-    # TODO: Remove image background
 
     filename = f"{username}_{round(time.time()*1000)}.{filetype}"
     r2.upload_fileobj(image, IMAGE_BUCKET, filename)
@@ -181,7 +182,7 @@ def get_utilization(request):
 
     if username is None:
         return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
-    
+
     return JsonResponse({
         "utilization": compute_utilization({ "username": username }),
         "rewears": compute_rewears({ "username": username })
