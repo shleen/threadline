@@ -152,7 +152,7 @@ def get_recommendations(request):
 
     # Weather Filtering API Call Here
     is_winter = True # please set to either True or False
-    precip = None # please set to None, "RAIN", or "SNOW"
+    precip = "RAIN" # please set to None, "RAIN", or "SNOW"
 
     context = { "username": username, "iswinter": is_winter, "precip": precip }
     clothes = filter_and_rank(context)
