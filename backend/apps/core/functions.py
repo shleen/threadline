@@ -45,13 +45,17 @@ def item_match(ranked):
 
     outfits = []
     while len(ranked["TOP"]) > 0 and len(ranked["BOTTOM"]) > 0 and len(ranked["SHOES"]) > 0:
-        outfit = {}
+        outfit = {k: None for k in ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]}
+
         for k, queue in ranked.items():
             if k == "DRESS" or k == "OUTERWEAR":
-                outfit[k] = None
                 continue
             garment = queue.pop()
-            outfit[k] = {"id": garment["id"], "img": garment["img_filename"]}
+
+            if outfit[k] is None:
+                outfit[k] = [{"id": garment["id"], "img": garment["img_filename"]}]
+            else:
+                outfit[k].append({"id": garment["id"], "img": garment["img_filename"]})
 
         outfits.append(outfit)
 
@@ -74,7 +78,13 @@ def pull_past_outfits(context):
         
         outfit["outfit_id"] = outfit_id
         outfit["timestamp"] = rec["date_worn"]
-        outfit[rec["type"]] = {"clothing_id": rec["clothing_id"], "img": rec["img_filename"]}
+
+        garment = {"clothing_id": rec["clothing_id"], "img": rec["img_filename"]}
+        if outfit[rec["type"]] is None:
+            outfit[rec["type"]] = [garment]
+        else:
+            outfit[rec["type"]].append(garment)
+        
         outfit_dict[outfit_id] = outfit
 
     return sorted(list(outfit_dict.values()), key=lambda outfit: outfit["timestamp"], reverse=True)[:15]
