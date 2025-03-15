@@ -31,6 +31,7 @@ def prev_outfit_query():
           JOIN core_user U
             ON U.id = C.user_id
          WHERE U.username = %s
+      ORDER BY O2.date_worn DESC
          LIMIT 15;
     """
 
