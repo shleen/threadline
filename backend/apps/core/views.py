@@ -74,7 +74,7 @@ def create_clothing(request):
     else:
         return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png, jpeg). Please try again.")
 
-    # TODO: Compress image
+    # Compress image
     image:UploadedFile = compress_image(image)
 
     # Limit image size to 10MB
@@ -87,7 +87,6 @@ def create_clothing(request):
     color_bstar = 0.0
 
     filename = f"{username}_{round(time.time()*1000)}.{filetype}"
-    r2.upload_fileobj(image, IMAGE_BUCKET, filename)
 
     ## Insert clothing item to DB
     user = get_or_create_user(username)
@@ -105,9 +104,26 @@ def create_clothing(request):
         winter=winter,
         user=user
     )
-    item.save()
 
-    return HttpResponse(status=200)
+    # Insert into database, upload to R2, and retry if error
+
+    for attempt in range(5):
+        try:
+            item.save()
+            break;
+        except:
+            if attempt >= 5:
+                return HttpResponseBadRequest("Database Insertion Failure.")
+
+    for attempt in range(5):
+        try:
+            r2.upload_fileobj(image, IMAGE_BUCKET, filename)
+            return HttpResponse(status=200)
+        except:
+            if attempt >= 5:
+                item.delete()
+                return HttpResponseBadRequest("R2 Upload Failure.")
+
 
 @csrf_exempt
 @require_method('GET')
