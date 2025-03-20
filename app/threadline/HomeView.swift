@@ -60,6 +60,7 @@ struct HomeView: View {
 
     @State private var isPresentingLogOutfitView: Bool = false
     @State private var isPresentingWardrobeView: Bool = false
+    @State private var isPresentingGenerateView: Bool = false
     @State private var selectedTab: Int = 0
 
     var body: some View {
@@ -133,6 +134,14 @@ struct HomeView: View {
             }
             .buttonStyle(.borderedProminent)
             .padding(.top, 4)
+            
+            Button(action: {isPresentingGenerateView.toggle() }) {
+                Text("Generate an Outfit")
+                    .font(.system(size: 16, weight: .regular))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.top, 4)
         }
         .padding(.horizontal, 16)
         .navigationDestination(isPresented: $isPresentingLogOutfitView) {
@@ -140,6 +149,9 @@ struct HomeView: View {
         }
         .navigationDestination(isPresented: $isPresentingWardrobeView) {
             WardrobeView()
+        }
+        .navigationDestination(isPresented: $isPresentingGenerateView) {
+            GenerateView()
         }
     }
 }
