@@ -1,4 +1,5 @@
 import time
+import boto3
 
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -63,7 +64,8 @@ def create_clothing(request):
     # TODO: process tags
     # tags is optional
     if "tags" in fields:
-        pass
+        for tag in fileds:
+            pass
 
     ## Process & upload image to Cloudflare R2
     # Validate filetype
@@ -72,7 +74,6 @@ def create_clothing(request):
     else:
         return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png, jpeg). Please try again.")
 
-    # TODO: Compress image
 
     # Limit image size to 10MB
     if image.size > 10**6:
@@ -83,10 +84,10 @@ def create_clothing(request):
     color_astar = 0.0
     color_bstar = 0.0
 
-    # TODO: Remove image background
-
     filename = f"{username}_{round(time.time()*1000)}.{filetype}"
-    r2.upload_fileobj(image, IMAGE_BUCKET, filename)
+
+    # Compress image
+    image:UploadedFile = compress_image(image)
 
     ## Insert clothing item to DB
     user = get_or_create_user(username)
@@ -104,9 +105,26 @@ def create_clothing(request):
         winter=winter,
         user=user
     )
-    item.save()
 
-    return HttpResponse(status=200)
+    # Insert into database, upload to R2, and retry if error
+
+    for attempt in range(5):
+        try:
+            item.save()
+            break;
+        except:
+            if attempt >= 5:
+                return HttpResponseBadRequest("Database Insertion Failure.")
+
+    for attempt in range(5):
+        try:
+            r2.upload_fileobj(image, IMAGE_BUCKET, filename)
+            return HttpResponse(status=200)
+        except:
+            if attempt >= 5:
+                item.delete()
+                return HttpResponseBadRequest("R2 Upload Failure.")
+
 
 @csrf_exempt
 @require_method('GET')
@@ -120,7 +138,7 @@ def get_closet(request):
 
     # Get all clothing items and include their tags
     clothes = Clothing.objects.filter(user=user).values(
-        'id', 
+        'id',
         'type',
         'subtype',
         'img_filename',
@@ -181,7 +199,7 @@ def get_utilization(request):
 
     if username is None:
         return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
-    
+
     return JsonResponse({
         "utilization": compute_utilization({ "username": username }),
         "rewears": compute_rewears({ "username": username })

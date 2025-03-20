@@ -70,10 +70,4 @@ fastlane/test_output
 app/buildServer.json
 **/__pycache__/
 backend/.env
-
-
-# Virtual Environment directories
-bin/
-lib/
-lib64
 pyvenv.cfg
