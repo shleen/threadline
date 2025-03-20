@@ -8,11 +8,11 @@
 import SwiftUI
 
 struct Outfit: Codable {
-    let TOP: ClothingItem?
-    let BOTTOM: ClothingItem?
-    let OUTERWEAR: ClothingItem?
-    let DRESS: ClothingItem?
-    let SHOES: ClothingItem?
+    let TOP: [ClothingItem]?
+    let BOTTOM: [ClothingItem]?
+    let OUTERWEAR: [ClothingItem]?
+    let DRESS: [ClothingItem]?
+    let SHOES: [ClothingItem]?
 }
 
 struct ClothingItem: Codable {
@@ -21,6 +21,7 @@ struct ClothingItem: Codable {
 }
 
 struct GenerateView: View {
+    @AppStorage("username") private var username: String = ""
     
     @Environment(UrlStore.self) private var urlStore
     
@@ -75,7 +76,7 @@ struct GenerateView: View {
     }
     
     func fetchOutfits() {
-        guard let url = URL(string: "\(urlStore.serverUrl)/recommendation/get?username={username}") else { return }
+        guard let url = URL(string: "\(urlStore.serverUrl)/recommendation/get?username=\(username)") else { return }
         
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let data = data {
@@ -99,11 +100,5 @@ struct GenerateView: View {
         guard !outfits.isEmpty else { return }
         currentIndex = (currentIndex + 1) % outfits.count
         selectedOutfit = outfits[currentIndex]
-    }
-}
-
-struct GenerateView_Previews: PreviewProvider {
-    static var previews: some View {
-        GenerateView()
     }
 }
