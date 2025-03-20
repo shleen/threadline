@@ -1,5 +1,4 @@
 import time
-import boto3
 
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -136,8 +135,11 @@ def get_closet(request):
 
     user = get_object_or_404(User, username=username)
 
+    # Get Clothing type we want to filter with if one is provided
+    type = request.GET.get('type')
+
     # Get all clothing items and include their tags
-    clothes = Clothing.objects.filter(user=user).values(
+    clothes = Clothing.objects.filter(user=user, type=type).values(
         'id',
         'type',
         'subtype',
