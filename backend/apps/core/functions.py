@@ -4,7 +4,10 @@ from django.core.files.uploadedfile import InMemoryUploadedFile, UploadedFile
 from .models import User
 from .queries import *
 from PIL import Image
+from rembg import remove
 import io
+import os
+import tempfile
 
 
 def get_or_create_user(username):
@@ -131,3 +134,21 @@ def compress_image(upload_image: UploadedFile, quality=70) -> UploadedFile:
     img.close()
 
     return compressed_image
+
+# Returns file_path of the image in /tmp
+def save_image_in_tmp(image: UploadedFile, filename):
+    temp_dir = tempfile.mkdtemp()
+    file_path = os.path.join(temp_dir, filename)
+
+    # Save file
+    with open(file_path, 'wb') as img_file:
+        for chunk in image.chunks():
+            img_file.write(chunk)
+
+    return file_path
+
+# Overwrites image file with a version with the background removed
+def img_bg_rm(file_path):
+    input = Image.open(file_path)
+    output = remove(input)
+    output.save(file_path)

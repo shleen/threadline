@@ -74,8 +74,6 @@ def create_clothing(request):
     else:
         return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png, jpeg). Please try again.")
 
-    # Compress image
-    image:UploadedFile = compress_image(image)
 
     # Limit image size to 10MB
     if image.size > 10**6:
@@ -87,6 +85,9 @@ def create_clothing(request):
     color_bstar = 0.0
 
     filename = f"{username}_{round(time.time()*1000)}.{filetype}"
+
+    # Compress image
+    image:UploadedFile = compress_image(image)
 
     ## Insert clothing item to DB
     user = get_or_create_user(username)
