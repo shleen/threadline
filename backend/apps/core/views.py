@@ -171,8 +171,22 @@ def get_recommendations(request):
         return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
 
     # Weather Filtering API Call Here
-    is_winter = True # please set to either True or False
-    precip = "RAIN" # please set to None, "RAIN", or "SNOW"
+    lat = request.GET.get('lat')
+    lon = request.GET.get('lon')
+
+    # Use defaults for is_winter and precip
+    is_winter = False
+    precip = None
+
+    if lat and lon:
+        # Get weather at location
+        weather = get_weather(float(lat), float(lon))
+
+        is_winter = weather["temp"] < 45
+        precip = weather["precip"]
+    else:
+        # TODO: decide how to handle this. FE error?
+        pass
 
     context = { "username": username, "iswinter": is_winter, "precip": precip }
     clothes = filter_and_rank(context)
