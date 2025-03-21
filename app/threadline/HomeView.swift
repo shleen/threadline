@@ -32,7 +32,7 @@ struct HomeView: View {
                     }
                     .tag(1)
 
-                Text("Placeholder 2")
+                RecentView()
                     .tabItem {
                         Image(systemName: "clock.arrow.circlepath")
                         Text("Recent")
