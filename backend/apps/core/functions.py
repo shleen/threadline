@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import UploadedFile
 
@@ -7,7 +8,9 @@ from PIL import Image
 from rembg import remove
 import io
 import os
+import requests
 import tempfile
+import time
 
 
 def get_or_create_user(username):
@@ -164,3 +167,66 @@ def img_bg_rm(file_path):
     input = Image.open(file_path)
     output = remove(input)
     output.save(file_path)
+
+def get_weather(lat, lon):
+    """
+    Checks cache to see for weather info for this location. Sameness of location is determined
+    if the coordinates (round(lat, 1), round(lon, 1)) exist in the cache. If the cached data is
+    still valid (made less than 6 hours ago), return that. If not, remove it from the cache and
+    make a call to the API as below, and update the cache.
+
+    If no matches are found in the cache, makes a HTTP request to the OpenWeatherMap Weather
+    endpoint to get the current weather at the provided coordinates. The result of this called
+    is cached in memory to limit calls to the API.
+
+    Returns the current weather at (lat, lon) as a dict:
+    {
+        temp: float,
+        precip: string, # Either None, "RAIN", or "SNOW"
+        location: string,
+    }
+    """
+
+
+    # cache key: 'weater,<latitude rounded to 1dp>,<longitude rounded to 1dp>'
+    key = f"weather,{round(lat, 1)},{round(lon, 1)}"
+    now = time.time()
+
+    # check if weather data exists in cache and is still valid (< 6 hours old)
+    cached = cache.get(key)
+    if cached:
+        if now - cached["timestamp"] < 6 * 3600:
+            return cached["data"]
+        else:
+            cache.delete(key)
+
+    # build API request URL
+    API_KEY = os.getenv("OPENWEATHERMAP_API_KEY")
+    url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=imperial"
+
+    # make the HTTP request to the API
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+
+        temp = data["main"]["temp"]
+
+        precip = None
+        # See https://openweathermap.org/weather-conditions to make sense of the values below
+        weather_id = data["weather"][0]["id"]
+        if 200 <= weather_id <= 599:
+            precip = "RAIN"
+        elif 600 <= weather_id <= 699:
+            precip = "SNOW"
+
+        result = {
+            "temp": temp,
+            "precip": precip,
+            "location": f"{lat}, {lon}",
+        }
+
+        # update the cache with current timestamp and result data
+        cache.set(key, {"timestamp": now, "data": result})
+        return result
+    else:
+        raise Exception("failed to fetch weather data")

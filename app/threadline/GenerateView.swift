@@ -25,6 +25,8 @@ struct GenerateView: View {
     
     @Environment(UrlStore.self) private var urlStore
     
+    @ObservedObject private var locationManager = LocationManager.shared
+
     @State private var outfits: [Outfit] = []
     @State private var selectedOutfit: Outfit?
     @State private var currentIndex: Int = 0
@@ -76,24 +78,29 @@ struct GenerateView: View {
     }
     
     func fetchOutfits() {
-        guard let url = URL(string: "\(urlStore.serverUrl)/recommendation/get?username=\(username)") else { return }
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let data = data {
-                do {
-                    let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
-                    if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
-                        DispatchQueue.main.async {
-                            self.outfits = fetchedOutfits
-                            self.selectedOutfit = fetchedOutfits.first
-                            self.currentIndex = 0
+        locationManager.requestLocation { location in
+            let lat = location.coordinate.latitude
+            let lon = location.coordinate.longitude
+
+            guard let url = URL(string: "\(urlStore.serverUrl)/recommendation/get?username=\(username)&lat=\(lat)&lon=\(lon)") else { return }
+
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                if let data = data {
+                    do {
+                        let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
+                        if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
+                            DispatchQueue.main.async {
+                                self.outfits = fetchedOutfits
+                                self.selectedOutfit = fetchedOutfits.first
+                                self.currentIndex = 0
+                            }
                         }
+                    } catch {
+                        print("Error decoding JSON: \(error)")
                     }
-                } catch {
-                    print("Error decoding JSON: \(error)")
                 }
-            }
-        }.resume()
+            }.resume()
+        }
     }
     
     func nextOutfit() {
