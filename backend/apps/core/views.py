@@ -177,11 +177,18 @@ def log_outfit(request):
             return HttpResponseBadRequest("Required field 'clothing_ids' not provided. Please try again.")
 
         user = get_object_or_404(User, username=username)
+
+        # Validate all clothing items belong to user
+        clothing_items = []
+        for clothing_id in clothing_ids:
+            clothing_item = get_object_or_404(Clothing, id=clothing_id, user=user)
+            clothing_items.append(clothing_item)
+
+        # Create outfit and save outfit items
         outfit = Outfit(user=user, date_worn=timezone.now())
         outfit.save()
 
-        for clothing_id in clothing_ids:
-            clothing_item = get_object_or_404(Clothing, id=clothing_id)
+        for clothing_item in clothing_items:
             outfit_item = OutfitItem(clothing=clothing_item, outfit=outfit)
             outfit_item.save()
     except Exception as e:
