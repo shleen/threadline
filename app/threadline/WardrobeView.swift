@@ -8,6 +8,11 @@
 import SwiftUI
 
 struct WardrobeView: View {
+    @AppStorage("username") private var username: String = ""
+    @Environment(UrlStore.self) private var urlStore
+    
+    @State private var clothingItems: [Clothing] = []
+    
     //Todo get images from backend using database
     //let images = ["image1", "image2", "image3", "image4", "image5", "image6"]
     let images = ["Example", "Sweats", "Example", "Example", "Example"]
@@ -18,37 +23,57 @@ struct WardrobeView: View {
         GridItem(.flexible())
     ]
     
-    @State private var selectedTab = "All"
-    let tabs = ["All", "Tagged"]
-    
     var body: some View {
-        //View of outfits in a 3 column view
-        //TODO Change images presented based on the tab
         VStack {
-            //Header with tabs
-            Picker("Select Tab", selection: $selectedTab) {
-                ForEach(tabs, id: \..self) { tab in
-                    Text(tab).tag(tab)
-                }
-            }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding(.horizontal)
-            .background(Color.gray)
-            .foregroundColor(.white)
-            
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 10) {
-                    ForEach(images, id: \..self) { image in
-                        Image(image)
-                            .resizable()
-                            .aspectRatio(1, contentMode: .fill)
-                            .frame(width: 100, height: 100)
-                            .clipped()
-                            .cornerRadius(10)
+                    ForEach(clothingItems) { item in
+                        // Construct full URL by combining R2 bucket URL with image filename
+                        AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img_filename)")) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(1, contentMode: .fill)
+                                .frame(width: 100, height: 100)
+                                .clipped()
+                                .cornerRadius(10)
+                        } placeholder: {
+                            ProgressView()
+                                .frame(width: 100, height: 100)
+                        }
                     }
                 }
                 .padding()
             }
         }
+        .onAppear {
+            fetchCloset()
+        }
+    }
+    
+    func fetchCloset() {
+        guard let url = URL(string: "\(urlStore.serverUrl)/closet/get?username=\(username)") else { return }
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("Error fetching closet: \(error)")
+                return
+            }
+            
+            if let data = data {
+                do {
+                    let decodedResponse = try JSONDecoder().decode([String: [Clothing]].self, from: data)
+                    if let items = decodedResponse["items"] {
+                        DispatchQueue.main.async {
+                            // Sort by newest first
+                            self.clothingItems = items.sorted { $0.created_at > $1.created_at }
+                        }
+                    }
+                } catch {
+                    print("Error decoding JSON: \(error)")
+                    if let responseString = String(data: data, encoding: .utf8) {
+                        print("Raw response: \(responseString)")
+                    }
+                }
+            }
+        }.resume()
     }
 }
