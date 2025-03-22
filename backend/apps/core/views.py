@@ -139,7 +139,12 @@ def get_closet(request):
     type = request.GET.get('type')
 
     # Get all clothing items and include their tags
-    clothes = Clothing.objects.filter(user=user, type=type).values(
+    clothes = Clothing.objects.filter(user=user)
+
+    if type is not None:
+        clothes = clothes.filter(type=type)
+
+    clothes = clothes.values(
         'id',
         'type',
         'subtype',
