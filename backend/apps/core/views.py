@@ -1,3 +1,4 @@
+import json
 import time
 
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
@@ -167,7 +168,7 @@ def get_closet(request):
 @require_method('POST')
 def log_outfit(request):
     try:
-        fields = request.POST
+        fields = json.loads(request.body.decode('utf-8'))
         username = fields.get('username')
         clothing_ids = fields.get('clothing_ids')
 
