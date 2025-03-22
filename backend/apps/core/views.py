@@ -1,12 +1,14 @@
+import json
 import time
 
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from .decorators import require_method
 from .functions import *
 from .images import IMAGE_BUCKET, r2
-from .models import Clothing, User, Tags
+from .models import Clothing, User, Tags, Outfit, OutfitItem
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -161,6 +163,39 @@ def get_closet(request):
 
     response_data = {'items': clothing_list}
     return JsonResponse(response_data)
+
+@csrf_exempt
+@require_method('POST')
+def log_outfit(request):
+    try:
+        fields = json.loads(request.body.decode('utf-8'))
+        username = fields.get('username')
+        clothing_ids = fields.get('clothing_ids')
+
+        if username is None:
+            return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
+        if clothing_ids is None:
+            return HttpResponseBadRequest("Required field 'clothing_ids' not provided. Please try again.")
+
+        user = get_object_or_404(User, username=username)
+
+        # Validate all clothing items belong to user
+        clothing_items = []
+        for clothing_id in clothing_ids:
+            clothing_item = get_object_or_404(Clothing, id=clothing_id, user=user)
+            clothing_items.append(clothing_item)
+
+        # Create outfit and save outfit items
+        outfit = Outfit(date_worn=timezone.now())
+        outfit.save()
+
+        for clothing_item in clothing_items:
+            outfit_item = OutfitItem(clothing=clothing_item, outfit=outfit)
+            outfit_item.save()
+        
+        return HttpResponse(status=200)
+    except Exception as e:
+        return HttpResponseBadRequest(f"An error occurred: {str(e)}")
 
 @csrf_exempt
 @require_method('GET')
