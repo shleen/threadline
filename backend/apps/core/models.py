@@ -125,9 +125,10 @@ class Tags(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-
 class Outfit(models.Model):
     date_worn = models.DateTimeField(default=timezone.now)
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
 class OutfitItem(models.Model):
     clothing = models.ForeignKey(Clothing, on_delete=models.CASCADE)
