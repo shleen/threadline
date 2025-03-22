@@ -7,13 +7,28 @@
 
 import SwiftUI
 
+struct RecentOutfit: Codable {
+    let TOP: [RecentItem]?
+    let BOTTOM: [RecentItem]?
+    let OUTERWEAR: [RecentItem]?
+    let DRESS: [RecentItem]?
+    let SHOES: [RecentItem]?
+    let outfit_id: Int
+    let timestamp: String
+}
+
+struct RecentItem: Codable {
+    let clothing_id: Int
+    let img: String
+}
+
 struct RecentView: View {
     @AppStorage("username") private var username: String = ""
     
     @Environment(UrlStore.self) private var urlStore
 
-    @State private var outfits: [Outfit] = []
-    @State private var selectedOutfit: Outfit?
+    @State private var outfits: [RecentOutfit] = []
+    @State private var selectedOutfit: RecentOutfit?
     @State private var currentIndex: Int = 0
     
     var body: some View {
@@ -41,11 +56,11 @@ struct RecentView: View {
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let data = data {
                 do {
-                    let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
+                    let decodedResponse = try JSONDecoder().decode([String: [RecentOutfit]].self, from: data)
                     if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
                         DispatchQueue.main.async {
                             self.outfits = fetchedOutfits
-                            self.selectedOutfit = fetchedOutfits.first
+                            self.selectedOutfit = self.outfits.first
                             self.currentIndex = 0
                         }
                     }
