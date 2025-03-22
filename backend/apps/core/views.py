@@ -125,8 +125,6 @@ def create_clothing(request):
                 return HttpResponseBadRequest("R2 Upload Failure.")
 
 
-@csrf_exempt
-@require_method('GET')
 def get_closet(request):
     username = request.GET.get('username')
 
@@ -136,6 +134,10 @@ def get_closet(request):
     user = get_object_or_404(User, username=username)
     # Start with base query and evaluate it once
     query = Clothing.objects.filter(user=user)
+    
+    type = request.GET.get('type')
+    if type is not None:
+        query = query.filter(type=type)
     
     # Get all clothing items and include their tags
     clothing_list = list(query.values(
