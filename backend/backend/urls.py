@@ -23,5 +23,6 @@ urlpatterns = [
     path('closet/get', views.get_closet),
     path('recommendation/get', views.get_recommendations),
     path('outfits/get', views.get_prev_outfits),
+    path('outfit/post', views.log_outfit),
     path('utilization/get', views.get_utilization)
 ]
