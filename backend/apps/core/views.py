@@ -132,19 +132,15 @@ def get_closet(request):
         return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
 
     user = get_object_or_404(User, username=username)
-
-    # Get Clothing type we want to filter with if one is provided
+    # Start with base query and evaluate it once
+    query = Clothing.objects.filter(user=user)
+    
     type = request.GET.get('type')
-
-
-    # Get all clothing items and include their tags
-    clothes_query = Clothing.objects.filter(user=user)
-
-    # Apply second filter if type is specified
     if type is not None:
-        clothes_query = clothes_query.filter(type=type)
-
-    clothes = clothes_query.values(
+        query = query.filter(type=type)
+    
+    # Get all clothing items and include their tags
+    clothing_list = list(query.values(
         'id',
         'type',
         'subtype',
@@ -158,15 +154,13 @@ def get_closet(request):
         'occasion',
         'winter',
         'created_at'
-    )
-
-
-    for item in clothes:
+    ))
+    # Add tags to each item
+    for item in clothing_list:
         item['tags'] = list(Tags.objects.filter(clothing_id=item['id']).values('label', 'value'))
 
-    return JsonResponse({
-        'items': list(clothes)
-    })
+    response_data = {'items': clothing_list}
+    return JsonResponse(response_data)
 
 @csrf_exempt
 @require_method('GET')
