@@ -8,14 +8,14 @@
 import SwiftUI
 
 struct Outfit: Codable {
-    let TOP: [ClothingItem]?
-    let BOTTOM: [ClothingItem]?
-    let OUTERWEAR: [ClothingItem]?
-    let DRESS: [ClothingItem]?
-    let SHOES: [ClothingItem]?
+    var TOP: [ClothingItem]?
+    var BOTTOM: [ClothingItem]?
+    var OUTERWEAR: [ClothingItem]?
+    var DRESS: [ClothingItem]?
+    var SHOES: [ClothingItem]?
 }
 
-struct ClothingItem: Codable, Identifiable {
+struct ClothingItem: Codable, Identifiable, Equatable {
     let id: Int
     let img: String
 }
@@ -28,6 +28,9 @@ struct GenerateView: View {
     @State private var selectedOutfit: Outfit?
     @State private var currentIndex: Int = 0
     @State private var isOutfitConfirmed: Bool = false
+    @State private var isSwapViewPresented: Bool = false
+    @State private var itemToSwap: ClothingItem?
+    @State private var categoryToSwap: String?
     
     var body: some View {
         VStack {
@@ -39,20 +42,30 @@ struct GenerateView: View {
                 
                 LazyVGrid(columns: columns, spacing: 20) {
                     ForEach(items) { item in
-                        AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
-                            if let image = phase.image {
-                                image
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 100, height: 100)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                            } else {
-                                Image(systemName: "photo")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 100, height: 100)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .foregroundColor(.gray)
+                        VStack {
+                            AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
+                                if let image = phase.image {
+                                    image
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 100, height: 100)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                } else {
+                                    Image("Example")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 100, height: 100)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            Button(action: {
+                                itemToSwap = item
+                                categoryToSwap = getCategory(for: item)
+                                isSwapViewPresented = true
+                            }) {
+                                Image(systemName: "arrow.swap")
+                                    .foregroundColor(.blue)
                             }
                         }
                     }
@@ -100,6 +113,13 @@ struct GenerateView: View {
         .onAppear {
             fetchOutfits()
         }
+        .sheet(isPresented: $isSwapViewPresented) {
+            if let category = categoryToSwap {
+                SwapItemView(category: category, onItemSelected: { newItem in
+                    swapItem(newItem: newItem)
+                })
+            }
+        }
     }
     
     func fetchOutfits() {
@@ -118,28 +138,6 @@ struct GenerateView: View {
             self.currentIndex = 0
             printOutfits(outfits: mockOutfits) // Print the contents of the outfits array
         }
-        
-//        guard let url = URL(string: "\(urlStore.serverUrl)/recommendation/get?username=\(username)") else {
-//                    print("Invalid URL")
-//                    return
-//                }
-//                URLSession.shared.dataTask(with: url) { data, response, error in
-//                    if let data = data {
-//                        do {
-//                            let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
-//                            if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
-//                                DispatchQueue.main.async {
-//                                    self.outfits = fetchedOutfits
-//                                    self.selectedOutfit = fetchedOutfits.first
-//                                    self.currentIndex = 0
-//                                    printOutfits(outfits: fetchedOutfits) // Print the contents of the outfits array
-//                                }
-//                            }
-//                        } catch {
-//                            print("Error decoding JSON: \(error)")
-//                        }
-//                    }
-//                }.resume()
     }
     
     func printOutfits(outfits: [Outfit]) {
@@ -198,5 +196,53 @@ struct GenerateView: View {
         default:
             return [GridItem(.flexible())]
         }
+    }
+    
+    func getCategory(for item: ClothingItem) -> String? {
+        if selectedOutfit?.TOP?.contains(where: { $0.id == item.id }) == true {
+            return "TOP"
+        } else if selectedOutfit?.BOTTOM?.contains(where: { $0.id == item.id }) == true {
+            return "BOTTOM"
+        } else if selectedOutfit?.OUTERWEAR?.contains(where: { $0.id == item.id }) == true {
+            return "OUTERWEAR"
+        } else if selectedOutfit?.DRESS?.contains(where: { $0.id == item.id }) == true {
+            return "DRESS"
+        } else if selectedOutfit?.SHOES?.contains(where: { $0.id == item.id }) == true {
+            return "SHOES"
+        }
+        return nil
+    }
+    
+    func swapItem(newItem: ClothingItem) {
+        guard let category = categoryToSwap else { return }
+        guard var outfit = selectedOutfit else { return }
+        
+        switch category {
+        case "TOP":
+            if let index = outfit.TOP?.firstIndex(where: { $0.id == itemToSwap?.id }) {
+                outfit.TOP?[index] = newItem
+            }
+        case "BOTTOM":
+            if let index = outfit.BOTTOM?.firstIndex(where: { $0.id == itemToSwap?.id }) {
+                outfit.BOTTOM?[index] = newItem
+            }
+        case "OUTERWEAR":
+            if let index = outfit.OUTERWEAR?.firstIndex(where: { $0.id == itemToSwap?.id }) {
+                outfit.OUTERWEAR?[index] = newItem
+            }
+        case "DRESS":
+            if let index = outfit.DRESS?.firstIndex(where: { $0.id == itemToSwap?.id }) {
+                outfit.DRESS?[index] = newItem
+            }
+        case "SHOES":
+            if let index = outfit.SHOES?.firstIndex(where: { $0.id == itemToSwap?.id }) {
+                outfit.SHOES?[index] = newItem
+            }
+        default:
+            break
+        }
+        
+        outfits[currentIndex] = outfit
+        selectedOutfit = outfit
     }
 }
