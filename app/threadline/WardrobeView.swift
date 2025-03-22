@@ -13,10 +13,6 @@ struct WardrobeView: View {
     
     @State private var clothingItems: [Clothing] = []
     
-    //Todo get images from backend using database
-    //let images = ["image1", "image2", "image3", "image4", "image5", "image6"]
-    let images = ["Example", "Sweats", "Example", "Example", "Example"]
-    
     let columns = [
         GridItem(.flexible()),
         GridItem(.flexible()),
