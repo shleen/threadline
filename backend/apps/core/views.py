@@ -125,8 +125,6 @@ def create_clothing(request):
                 return HttpResponseBadRequest("R2 Upload Failure.")
 
 
-@csrf_exempt
-@require_method('GET')
 def get_closet(request):
     username = request.GET.get('username')
 
@@ -138,8 +136,15 @@ def get_closet(request):
     # Get Clothing type we want to filter with if one is provided
     type = request.GET.get('type')
 
+
     # Get all clothing items and include their tags
-    clothes = Clothing.objects.filter(user=user, type=type).values(
+    clothes_query = Clothing.objects.filter(user=user)
+
+    # Apply second filter if type is specified
+    if type is not None:
+        clothes_query = clothes_query.filter(type=type)
+
+    clothes = clothes_query.values(
         'id',
         'type',
         'subtype',
@@ -154,6 +159,7 @@ def get_closet(request):
         'winter',
         'created_at'
     )
+
 
     for item in clothes:
         item['tags'] = list(Tags.objects.filter(clothing_id=item['id']).values('label', 'value'))
