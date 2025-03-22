@@ -52,6 +52,8 @@ def create_clothing(request):
 
     if "winter" in fields:
         winter = fields["winter"]
+        if winter != "True" or winter != "False":
+            return HttpResponseBadRequest("The Value of the field 'winter' must be 'True' or 'False'")
     else:
         return HttpResponseBadRequest("Required field 'winter' not provided. Please try again.")
 
@@ -80,15 +82,17 @@ def create_clothing(request):
     if image.size > 10**6:
         return HttpResponseBadRequest("Provided 'image' is larger than the 10MB limit. Please try again.")
 
+    filename = f"{username}_{round(time.time()*1000)}.{filetype}"
+
+    image_path = save_image_in_tmp(image, filename)
+
     # TODO: Get color
     color_lstar = 0.0
     color_astar = 0.0
     color_bstar = 0.0
 
-    filename = f"{username}_{round(time.time()*1000)}.{filetype}"
-
     # Compress image
-    image:UploadedFile = compress_image(image)
+    compress_image(image_path)
 
     ## Insert clothing item to DB
     user = get_or_create_user(username)
@@ -114,15 +118,16 @@ def create_clothing(request):
             item.save()
             break;
         except:
-            if attempt >= 5:
+            if attempt >= 4:
                 return HttpResponseBadRequest("Database Insertion Failure.")
 
     for attempt in range(5):
         try:
-            r2.upload_fileobj(image, IMAGE_BUCKET, filename)
+            # r2.upload_fileobj(image, IMAGE_BUCKET, filename)
+            r2.upload_file(image_path, IMAGE_BUCKET, filename)
             return HttpResponse(status=200)
         except:
-            if attempt >= 5:
+            if attempt >= 4:
                 item.delete()
                 return HttpResponseBadRequest("R2 Upload Failure.")
 
