@@ -52,12 +52,6 @@ struct LogOutfitView: View {
                 return
             }
 
-            guard let responseData = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                print("\(outfitPostRoute): failed JSON deserialization")
-                return
-            }
-
-            print("\(outfitPostRoute): \(responseData)")
             isPresented.toggle()
         }
     }
