@@ -126,15 +126,14 @@ class Tags(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
 class Outfit(models.Model):
-    date_worn = models.DateTimeField(default=timezone.now)
+    id = models.BigAutoField(primary_key=True, unique=True)
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    date_worn = models.DateTimeField(default=timezone.now)
 
 class OutfitItem(models.Model):
     clothing = models.ForeignKey(Clothing, on_delete=models.CASCADE)
 
     outfit = models.ForeignKey(Outfit, on_delete=models.CASCADE)
-
 
 ### Signal handlers
 @receiver(post_delete, sender=Clothing)
