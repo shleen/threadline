@@ -186,12 +186,14 @@ def log_outfit(request):
             clothing_items.append(clothing_item)
 
         # Create outfit and save outfit items
-        outfit = Outfit(user=user, date_worn=timezone.now())
+        outfit = Outfit(date_worn=timezone.now())
         outfit.save()
 
         for clothing_item in clothing_items:
             outfit_item = OutfitItem(clothing=clothing_item, outfit=outfit)
             outfit_item.save()
+        
+        return HttpResponse(status=200)
     except Exception as e:
         return HttpResponseBadRequest(f"An error occurred: {str(e)}")
 
