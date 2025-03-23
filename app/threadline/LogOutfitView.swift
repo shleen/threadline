@@ -26,12 +26,34 @@ struct LogOutfitView: View {
     @State private var selectedItems: Set<Int> = []
 
     private let closetGetRoute = "/closet/get"
+    private let outfitPostRoute = "/outfit/post"
 
     func saveOutfit() {
-        // TODO: Save outfit - post to /outfit/post
-        print(selectedItems)
+        guard let apiUrl = URL(string: "\(urlStore.serverUrl)\(outfitPostRoute)") else {
+            print("log_outfit: Bad URL")
+            return
+        }
 
-        isPresented.toggle()
+        let payload: [String: Any] = [
+            "username": username,
+            "clothing_ids": Array(selectedItems)
+        ]
+
+        var request = URLRequest(url: apiUrl)
+        request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        request.httpMethod = "POST"
+        request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+
+        Task(priority: .background) {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            if let httpStatus = response as? HTTPURLResponse, httpStatus.statusCode != 200 {
+                print("\(outfitPostRoute): HTTP STATUS: \(httpStatus.statusCode)")
+                return
+            }
+
+            isPresented.toggle()
+        }
     }
 
     var body: some View {
