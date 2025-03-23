@@ -278,21 +278,15 @@ def remove_background(request):
     if image is None:
         return HttpResponseBadRequest("Required field 'image' not provided. Please try again.")
 
-    if image.content_type in ['image/png', 'image/jpeg']:
+    if image.content_type in ['image/png']:
         filetype = image.content_type[6:]
     else:
-        return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png, jpeg). Please try again.")
+        return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png). Please try again.")
 
 
     # Save Image to tempdir,
     filename = f"{username}_{round(time.time()*1000)}.{filetype}"
     image_path = save_image_in_tmp(image, filename)
-
-    # convert to PNG if file is JPEG
-    if image.content_type is 'image/jpeg':
-        filename = f"{username}_{round(time.time()*1000)}.png"
-        with Image.open(image_path) as img:
-            img.save(image_path, 'PNG')
 
     #remove image background
     img_bg_rm(image_path)
