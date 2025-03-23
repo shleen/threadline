@@ -33,10 +33,11 @@ def create_clothing(request):
     if "subtype" in fields:
         subtype = fields["subtype"]
 
-    if "fit" in fields:
-        fit = fields["fit"]
-    else:
-        return HttpResponseBadRequest("Required field 'fit' not provided. Please try again.")
+    fit = "LOOSE"
+    # if "fit" in fields:
+    #     fit = fields["fit"]
+    # else:
+    #     return HttpResponseBadRequest("Required field 'fit' not provided. Please try again.")
 
     layerable = False
     if "layerable" in fields:
@@ -46,17 +47,19 @@ def create_clothing(request):
     if "precip" in fields:
         precip = fields["precip"]
 
-    if "occasion" in fields:
-        occasion = fields["occasion"]
-    else:
-        return HttpResponseBadRequest("Required field 'occasion' not provided. Please try again.")
+    occasion = "FORMAL"
+    # if "occasion" in fields:
+    #     occasion = fields["occasion"]
+    # else:
+    #     return HttpResponseBadRequest("Required field 'occasion' not provided. Please try again.")
 
-    if "winter" in fields:
-        winter = fields["winter"]
-        if winter != "True" and winter != "False":
-            return HttpResponseBadRequest("The Value of the field 'winter' must be 'True' or 'False'")
-    else:
-        return HttpResponseBadRequest("Required field 'winter' not provided. Please try again.")
+    winter = False
+    # if "winter" in fields:
+    #     winter = fields["winter"]
+    #     if winter != "True" and winter != "False":
+    #         return HttpResponseBadRequest("The Value of the field 'winter' must be 'True' or 'False'")
+    # else:
+    #     return HttpResponseBadRequest("Required field 'winter' not provided. Please try again.")
 
     image = None
     for _, file in request.FILES.items():
@@ -68,7 +71,7 @@ def create_clothing(request):
     # TODO: process tags
     # tags is optional
     if "tags" in fields:
-        for tag in fileds:
+        for tag in fields["tags"]:
             pass
 
     ## Process & upload image to Cloudflare R2
@@ -78,6 +81,8 @@ def create_clothing(request):
     else:
         return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png, jpeg). Please try again.")
 
+    # Compress image
+    compress_image(image_path)
 
     # Limit image size to 10MB
     if image.size > 10**6:
@@ -91,9 +96,6 @@ def create_clothing(request):
     color_lstar = 0.0
     color_astar = 0.0
     color_bstar = 0.0
-
-    # Compress image
-    compress_image(image_path)
 
     ## Insert clothing item to DB
     user = get_or_create_user(username)
@@ -113,7 +115,6 @@ def create_clothing(request):
     )
 
     # Insert into database, upload to R2, and retry if error
-
     for attempt in range(5):
         try:
             item.save()
