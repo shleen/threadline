@@ -52,7 +52,7 @@ def create_clothing(request):
 
     if "winter" in fields:
         winter = fields["winter"]
-        if winter != "True" or winter != "False":
+        if winter != "True" and winter != "False":
             return HttpResponseBadRequest("The Value of the field 'winter' must be 'True' or 'False'")
     else:
         return HttpResponseBadRequest("Required field 'winter' not provided. Please try again.")
