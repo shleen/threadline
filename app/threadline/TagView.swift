@@ -294,6 +294,7 @@ struct TagView: View {
                     // Wait for snackbar animation before navigating
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         navigateToWardrobe = true
+                        showSuccessSnackbar = false
                     }
                 }
             }
