@@ -8,12 +8,17 @@
 import SwiftUI
 
 struct TagView: View {
+    @AppStorage("username") private var username: String = ""
     @State private var tags: [String] = []
     @State private var newTag: String = ""
-    @State private var selectedCategory: String? = nil
+    @State private var clothingType: String = ""
+    @State private var subtype: String = ""
+    @State private var fit: String = ""
+    @State private var layerable: Bool = false
+    @State private var precip: String = ""
+    @State private var occasion: String = ""
+    @State private var winter: Bool = false
     let image: UIImage
-
-    let categories = ["Top", "Bottom", "Outerwear", "Dress", "Shoe"]
 
     var body: some View {
         VStack {
@@ -23,7 +28,28 @@ struct TagView: View {
                 .frame(height: 200)
                 .padding()
 
-            
+            PickerView(title: "Clothing Type", selection: $clothingType, options: MetadataOptions.clothingTypes)
+                .padding()
+
+            if let subtypes = getSubtypes(for: clothingType) {
+                PickerView(title: "Subtype", selection: $subtype, options: subtypes)
+                    .padding()
+            }
+
+            PickerView(title: "Fit", selection: $fit, options: MetadataOptions.fits)
+                .padding()
+
+            Toggle("Layerable", isOn: $layerable)
+                .padding()
+
+            PickerView(title: "Precipitation", selection: $precip, options: MetadataOptions.precipOptions)
+                .padding()
+
+            PickerView(title: "Occasion", selection: $occasion, options: MetadataOptions.occasions)
+                .padding()
+
+            Toggle("Winter", isOn: $winter)
+                .padding()
 
             HStack {
                 TextField("Enter tag", text: $newTag)
@@ -44,15 +70,6 @@ struct TagView: View {
                         .cornerRadius(8)
                 }
             }
-            .padding()
-            
-            Picker("Select Category", selection: $selectedCategory) {
-                Text("Select Category").tag(String?.none)
-                ForEach(categories, id: \.self) { category in
-                    Text(category).tag(String?.some(category))
-                }
-            }
-            .pickerStyle(MenuPickerStyle())
             .padding()
 
             ScrollView(.horizontal) {
@@ -82,20 +99,113 @@ struct TagView: View {
             Spacer()
 
             Button(action: {
-                // Handle done action
-                print("Tags: \(tags)")
-                print("Selected Category: \(selectedCategory ?? "None")")
+                uploadClothingItem()
             }) {
                 Text("Done")
                     .padding(.horizontal)
                     .padding(.vertical, 12)
-                    .background(selectedCategory == nil ? Color.gray : Color.green)
+                    .background(username.isEmpty || clothingType.isEmpty || fit.isEmpty || occasion.isEmpty ? Color.gray : Color.green)
                     .foregroundColor(.white)
                     .cornerRadius(8)
             }
             .padding()
-            .disabled(selectedCategory == nil)
+            .disabled(username.isEmpty || clothingType.isEmpty || fit.isEmpty || occasion.isEmpty)
         }
+    }
+
+    func getSubtypes(for type: String) -> [String]? {
+        switch type.lowercased() {
+        case "top":
+            return MetadataOptions.topSubtypes
+        case "bottom":
+            return MetadataOptions.bottomSubtypes
+        case "outerwear":
+            return MetadataOptions.outerwearSubtypes
+        case "dress":
+            return MetadataOptions.dressSubtypes
+        case "shoes":
+            return MetadataOptions.shoesSubtypes
+        default:
+            return nil
+        }
+    }
+
+    func uploadClothingItem() {
+        guard let url = URL(string: "http://your-backend-url/clothing/create") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+
+        // Add image data
+        if let imageData = image.jpegData(compressionQuality: 0.7) {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"image\"; filename=\"image.jpg\"\r\n".data(using: .utf8)!)
+            body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+            body.append(imageData)
+            body.append("\r\n".data(using: .utf8)!)
+        }
+
+        // Add other fields
+        let fields: [String: String] = [
+            "username": username,
+            "type": clothingType.uppercased(),
+            "subtype": subtype.uppercased(),
+            "fit": fit.uppercased(),
+            "layerable": layerable ? "true" : "false",
+            "precip": precip.uppercased(),
+            "occasion": occasion.uppercased(),
+            "winter": winter ? "true" : "false"
+        ]
+
+        for (key, value) in fields {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(value)\r\n".data(using: .utf8)!)
+        }
+
+        // Add tags
+        for tag in tags {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"tags\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(tag)\r\n".data(using: .utf8)!)
+        }
+
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        request.httpBody = body
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error: \(error)")
+                return
+            }
+
+            if let response = response as? HTTPURLResponse, response.statusCode == 200 {
+                print("Success")
+            } else {
+                print("Failed")
+            }
+        }.resume()
+    }
+}
+
+struct PickerView: View {
+    var title: String
+    @Binding var selection: String
+    var options: [String]
+
+    var body: some View {
+        Picker(title, selection: $selection) {
+            ForEach(options, id: \.self) { option in
+                Text(option).tag(option)
+            }
+        }
+        .pickerStyle(MenuPickerStyle())
     }
 }
 
