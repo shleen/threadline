@@ -24,7 +24,6 @@ struct HomeView: View {
                         Text("Home")
                     }
                     .tag(0)
-                //TODO Replace Text with correct Views
                 TagView()
                     .tabItem {
                         Image(systemName: "photo.badge.plus.fill")
@@ -39,6 +38,7 @@ struct HomeView: View {
                     }
                     .tag(2)
 
+                // TODO: Replace Text with correct View
                 Text("Placeholder 3")
                     .tabItem {
                         Image(systemName: "chart.bar.xaxis")
@@ -46,6 +46,7 @@ struct HomeView: View {
                     }
                     .tag(3)
 
+                // TODO: Replace Text with correct View
                 Text("Placeholder 4")
                     .tabItem {
                         Image(systemName: "person.fill")
