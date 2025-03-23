@@ -17,7 +17,8 @@ from django.views.decorators.csrf import csrf_exempt
 @require_method('POST')
 def create_clothing(request):
     ## Validate and extract request fields
-    fields = request.POST
+    fields = json.loads(request.body.decode('utf-8'))
+    print(fields)
 
     if "username" in fields:
         username = fields["username"]

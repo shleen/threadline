@@ -8,6 +8,9 @@
 import SwiftUI
 
 struct TagView: View {
+    @AppStorage("username") private var username: String = ""
+    @Environment(UrlStore.self) private var urlStore
+
     @State private var tags: [String] = []
     @State private var newTag: String = ""
     @State private var selectedCategory: String? = nil
@@ -15,7 +18,7 @@ struct TagView: View {
     @State private var selectedFit: String? = nil
     @State private var selectedOccasion: String? = nil
     @State private var selectedPrecip: String? = nil
-    @State private var isWinter: Bool? = nil
+    @State private var isWinter: String? = nil
     let image: UIImage
 
     let categories = ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]
@@ -105,9 +108,9 @@ struct TagView: View {
                 .padding()
                 
                 Picker("Winter", selection: $isWinter) {
-                    Text("Select Winter Option").tag(Bool?.none)
+                    Text("Select Winter Option").tag(String?.none)
                     ForEach(winterOptions, id: \.self) { option in
-                        Text(option).tag(option == "Winter" ? Bool?.some(true) : Bool?.some(false))
+                        Text(option).tag(option == "Winter" ? "True" : "False")
                     }
                 }
                 .pickerStyle(MenuPickerStyle())
@@ -142,13 +145,7 @@ struct TagView: View {
 
             Button(action: {
                 // Handle done action
-                print("Tags: \(tags)")
-                print("Selected Category: \(selectedCategory ?? "None")")
-                print("Selected Subtype: \(selectedSubtype ?? "None")")
-                print("Selected Fit: \(selectedFit ?? "None")")
-                print("Selected Occasion: \(selectedOccasion ?? "None")")
-                print("Selected Precipitation: \(selectedPrecip ?? "None")")
-                print("Winter: \(isWinter == true ? "Yes" : "No")")
+                sendClothingData()
             }) {
                 Text("Done")
                     .padding(.horizontal)
@@ -177,6 +174,53 @@ struct TagView: View {
         default:
             return []
         }
+    }
+    
+    func sendClothingData() {
+        guard let selectedCategory = selectedCategory,
+              let selectedFit = selectedFit,
+              let selectedOccasion = selectedOccasion else {
+            print("Required fields are missing")
+            return
+        }
+        
+        let payload: [String: Any] = [
+            "type": selectedCategory,
+            "subtype": selectedSubtype ?? "",
+            "fit": selectedFit,
+            "occasion": selectedOccasion,
+            "precip": selectedPrecip ?? "",
+            "winter": isWinter ?? "False",
+            "tags": tags,
+            "username": username
+        ]
+        
+        guard let url = URL(string: "\(urlStore.serverUrl)/clothing/create") else {
+            print("Invalid URL")
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+        } catch {
+            print("Error serializing JSON: \(error)")
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error sending clothing data: \(error)")
+                return
+            }
+            if let response = response as? HTTPURLResponse, response.statusCode == 200 {
+                print("Clothing data sent successfully")
+            } else {
+                print("Failed to send clothing data")
+            }
+        }.resume()
     }
 }
 
