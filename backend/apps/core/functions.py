@@ -6,7 +6,6 @@ from .models import User
 from .queries import *
 from PIL import Image
 from rembg import remove
-import io
 import os
 import requests
 import tempfile
@@ -137,18 +136,10 @@ def compute_rewears(context):
 
     return rewear_dict
 
-def compress_image(upload_image: UploadedFile, quality=70) -> UploadedFile:
-
-    img = Image.open(bytes(upload_image))
-
-    # Create a BytesIO object to store the image in memory
-    output = io.BytesIO()
-    # Save the image to the BytesIO object with reduced quality
-    img.save(output, format="JPEG", quality=quality)
-    compressed_image = UploadedFile(file=output, name=upload_image.name, content_type=upload_image.content_type)
+def compress_image(img_path, quality=70):
+    img = Image.open(img_path)
+    img.save(img_path, optimize=True, quality=quality)
     img.close()
-
-    return compressed_image
 
 # Returns file_path of the image in /tmp
 def save_image_in_tmp(image: UploadedFile, filename):
