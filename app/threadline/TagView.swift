@@ -123,7 +123,7 @@ struct TagView: View {
                     }
                     .pickerStyle(MenuPickerStyle())
                     .padding()
-                    
+
                     Picker("Select Precipitation", selection: $selectedPrecip) {
                         Text("Select Precipitation").tag(String?.none)
                         ForEach(precips, id: \.self) { precip in
@@ -175,12 +175,12 @@ struct TagView: View {
                     Text("Done")
                         .padding(.horizontal)
                         .padding(.vertical, 12)
-                        .background(selectedCategory == nil || image == nil ? Color.gray : Color.green)
+                        .background(isFormValid() ? Color.green : Color.gray)
                         .foregroundColor(.white)
                         .cornerRadius(8)
                 }
                 .padding()
-                .disabled(selectedCategory == nil || image == nil)
+                .disabled(!isFormValid())
             }
             .sheet(isPresented: $isImagePickerPresented) {
                 ImagePickerCoordinator(image: $image, sourceType: sourceType)
@@ -237,24 +237,39 @@ struct TagView: View {
         }
     }
 
+    func isFormValid() -> Bool {
+        return selectedCategory != nil &&
+               selectedSubtype != nil &&
+               selectedFit != nil &&
+               selectedOccasion != nil &&
+               isWinter != nil &&
+               image != nil
+    }
+
     func createClothingItem() {
         var multipart = MultipartRequest()
 
         // Create form body
         multipart.add(key: "username", value: username)
         multipart.add(key: "type", value: selectedCategory?.uppercased() ?? "")
-        multipart.add(key: "tags", value: tags)
+        multipart.add(key: "tags", value: tags.joined(separator: ","))
         multipart.add(key: "subtype", value: selectedSubtype ?? "")
         multipart.add(key: "fit", value: selectedFit ?? "")
         multipart.add(key: "occasion", value: selectedOccasion ?? "")
-        multipart.add(key: "precipitation", value: selectedPrecip ?? "")
         multipart.add(key: "isWinter", value: isWinter ?? "")
-        multipart.add(
-            key: "image",
-            fileName: "image.jpg",
-            fileMimeType: "image/jpeg",
-            fileData: image!.jpegData(compressionQuality: 0.8)!
-        )
+
+        if let selectedPrecip = selectedPrecip {
+            multipart.add(key: "precipitation", value: selectedPrecip)
+        }
+
+        if let imageData = image?.jpegData(compressionQuality: 0.8) {
+            multipart.add(
+                key: "image",
+                fileName: "image.jpg",
+                fileMimeType: "image/jpeg",
+                fileData: imageData
+            )
+        }
 
         /// Create a regular HTTP URL request & use multipart components
         guard let url = URL(string: "\(urlStore.serverUrl)/clothing/create") else { return }
@@ -286,47 +301,46 @@ struct TagView: View {
     }
 }
 
+struct TagView_Previews: PreviewProvider {
+    static var previews: some View {
+        TagView()
+    }
+}
 
-    struct TagView_Previews: PreviewProvider {
-        static var previews: some View {
-            TagView()
-        }
+struct ImagePickerCoordinator: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    var sourceType: UIImagePickerController.SourceType
+    @Environment(\.presentationMode) var presentationMode
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = sourceType
+        picker.delegate = context.coordinator
+        return picker
     }
 
-    struct ImagePickerCoordinator: UIViewControllerRepresentable {
-        @Binding var image: UIImage?
-        var sourceType: UIImagePickerController.SourceType
-        @Environment(\.presentationMode) var presentationMode
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
 
-        func makeUIViewController(context: Context) -> UIImagePickerController {
-            let picker = UIImagePickerController()
-            picker.sourceType = sourceType
-            picker.delegate = context.coordinator
-            return picker
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: ImagePickerCoordinator
+
+        init(_ parent: ImagePickerCoordinator) {
+            self.parent = parent
         }
 
-        func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-
-        func makeCoordinator() -> Coordinator {
-            Coordinator(self)
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                parent.image = image
+            }
+            parent.presentationMode.wrappedValue.dismiss()
         }
 
-        class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-            let parent: ImagePickerCoordinator
-
-            init(_ parent: ImagePickerCoordinator) {
-                self.parent = parent
-            }
-
-            func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-                if let image = info[.originalImage] as? UIImage {
-                    parent.image = image
-                }
-                parent.presentationMode.wrappedValue.dismiss()
-            }
-
-            func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-                parent.presentationMode.wrappedValue.dismiss()
-            }
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.presentationMode.wrappedValue.dismiss()
         }
     }
+}
