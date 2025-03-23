@@ -13,7 +13,7 @@ struct TagView: View {
     @State private var selectedCategory: String? = nil
     let image: UIImage
 
-    let categories = ["Top", "Bottom", "Outerwear", "Dress", "Shoe"]
+    let categories = ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]
 
     var body: some View {
         VStack {
