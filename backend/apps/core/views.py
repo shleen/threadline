@@ -89,7 +89,7 @@ def create_clothing(request):
     compress_image(image_path)
 
     # Limit image size to 10MB
-    if image.size > 10**6:
+    if os.path.isfile(filename) and os.path.getsize(image_path) > 10**6:
         return HttpResponseBadRequest("Provided 'image' is larger than the 10MB limit. Please try again.")
 
     # TODO: Get color
