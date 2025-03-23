@@ -80,8 +80,3 @@ struct SwapItemView: View {
         }.resume()
     }
 }
-
-struct ClosetResponse: Codable {
-    let items: [ClothingItem]
-}
-
