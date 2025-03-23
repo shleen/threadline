@@ -11,6 +11,9 @@ struct GenerateView: View {
     @AppStorage("username") private var username: String = ""
     
     @Environment(UrlStore.self) private var urlStore
+
+    @ObservedObject private var locationManager = LocationManager.shared
+
     @State private var outfits: [Outfit] = []
     @State private var selectedOutfit: Outfit?
     @State private var currentIndex: Int = 0
@@ -110,27 +113,33 @@ struct GenerateView: View {
     }
     
     func fetchOutfits() {
-        guard let url = URL(string: "\(urlStore.serverUrl)/recommendation/get?username=\(username)") else {
-            print("Invalid URL")
-            return
-        }
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            if let data = data {
-                do {
-                    let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
-                    if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
-                        DispatchQueue.main.async {
-                            self.outfits = fetchedOutfits
-                            self.selectedOutfit = fetchedOutfits.first
-                            self.currentIndex = 0
-                            printOutfits(outfits: fetchedOutfits) // Print the contents of the outfits array
-                        }
-                    }
-                } catch {
-                    print("Error decoding JSON: \(error)")
-                }
+        locationManager.requestLocation { location in
+            let lat = location.coordinate.latitude
+            let lon = location.coordinate.longitude
+
+            guard let url = URL(string: "\(urlStore.serverUrl)/recommendation/get?username=\(username)&lat=\(lat)&lon=\(lon)") else {
+                print("Invalid URL")
+                return
             }
-        }.resume()
+
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                if let data = data {
+                    do {
+                        let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
+                        if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
+                            DispatchQueue.main.async {
+                                self.outfits = fetchedOutfits
+                                self.selectedOutfit = fetchedOutfits.first
+                                self.currentIndex = 0
+                                printOutfits(outfits: fetchedOutfits) // Print the contents of the outfits array
+                            }
+                        }
+                    } catch {
+                        print("Error decoding JSON: \(error)")
+                    }
+                }
+            }.resume()
+        }
     }
     
     func printOutfits(outfits: [Outfit]) {
