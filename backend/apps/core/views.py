@@ -1,7 +1,8 @@
 import json
 import time
+import base64
 
-from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.http import FileResponse, HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -141,11 +142,11 @@ def get_closet(request):
     user = get_object_or_404(User, username=username)
     # Start with base query and evaluate it once
     query = Clothing.objects.filter(user=user)
-    
+
     type = request.GET.get('type')
     if type is not None:
         query = query.filter(type=type)
-    
+
     # Get all clothing items and include their tags
     clothing_list = list(query.values(
         'id',
@@ -197,7 +198,7 @@ def log_outfit(request):
         for clothing_item in clothing_items:
             outfit_item = OutfitItem(clothing=clothing_item, outfit=outfit)
             outfit_item.save()
-        
+
         return HttpResponse(status=200)
     except Exception as e:
         return HttpResponseBadRequest(f"An error occurred: {str(e)}")
@@ -260,3 +261,40 @@ def get_utilization(request):
         "utilization": compute_utilization({ "username": username }),
         "rewears": compute_rewears({ "username": username })
     })
+
+# Returns image in base64 encoded data, with its background removed
+@csrf_exempt
+@require_method('POST')
+def remove_background(request):
+    username = request.GET.get('username')
+
+    if username is None:
+        return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
+
+    image = request.GET.get('image')
+
+    if image is None:
+        return HttpResponseBadRequest("Required field 'image' not provided. Please try again.")
+
+    if image.content_type in ['image/png', 'image/jpeg']:
+        filetype = image.content_type[6:]
+    else:
+        return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png, jpeg). Please try again.")
+
+
+    # Save Image to tempdir,
+    filename = f"{username}_{round(time.time()*1000)}.{filetype}"
+    image_path = save_image_in_tmp(image, filename)
+
+    # convert to PNG if file is JPEG
+    if image.content_type is 'image/jpeg':
+        filename = f"{username}_{round(time.time()*1000)}.png"
+        with Image.open(image_path) as img:
+            img.save(image_path, 'PNG')
+
+    #remove image background
+    img_bg_rm(image_path)
+
+    bg_free_image_file = open(image_path, 'rb')
+    return FileResponse(bg_free_image_file, content_type='image/png')
+
