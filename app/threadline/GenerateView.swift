@@ -179,7 +179,52 @@ struct GenerateView: View {
             if let shoes = selectedOutfit.SHOES {
                 print("  SHOES: \(shoes.map { $0.img })")
             }
+            
+            // Send confirmed outfit to the server
+            sendConfirmedOutfit(outfit: selectedOutfit)
         }
+    }
+    
+    func sendConfirmedOutfit(outfit: Outfit) {
+        guard let url = URL(string: "\(urlStore.serverUrl)/outfit/post") else {
+            print("Invalid URL")
+            return
+        }
+        
+        var clothingIds: [Int] = []
+        if let tops = outfit.TOP { clothingIds.append(contentsOf: tops.map { $0.id }) }
+        if let bottoms = outfit.BOTTOM { clothingIds.append(contentsOf: bottoms.map { $0.id }) }
+        if let outerwears = outfit.OUTERWEAR { clothingIds.append(contentsOf: outerwears.map { $0.id }) }
+        if let dresses = outfit.DRESS { clothingIds.append(contentsOf: dresses.map { $0.id }) }
+        if let shoes = outfit.SHOES { clothingIds.append(contentsOf: shoes.map { $0.id }) }
+        
+        let payload: [String: Any] = [
+            "username": username,
+            "clothing_ids": clothingIds
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+        } catch {
+            print("Error serializing JSON: \(error)")
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error sending confirmed outfit: \(error)")
+                return
+            }
+            if let response = response as? HTTPURLResponse, response.statusCode == 200 {
+                print("Outfit confirmed successfully")
+            } else {
+                print("Failed to confirm outfit")
+            }
+        }.resume()
     }
     
     func getAllItems(from outfit: Outfit) -> [ClothingItem] {
