@@ -38,8 +38,8 @@ struct HomeView: View {
                     }
                     .tag(2)
 
-                // TODO: Replace Text with correct View
-                Text("Placeholder 3")
+
+                AnalyticsView()
                     .tabItem {
                         Image(systemName: "chart.bar.xaxis")
                         Text("Statistics")

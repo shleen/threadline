@@ -12,6 +12,7 @@ struct WardrobeView: View {
     @Environment(UrlStore.self) private var urlStore
     
     @State private var clothingItems: [Clothing] = []
+    @State private var selectedItem: Clothing? = nil
     
     let columns = [
         GridItem(.flexible()),
@@ -36,10 +37,16 @@ struct WardrobeView: View {
                             ProgressView()
                                 .frame(width: 100, height: 100)
                         }
+                        .onTapGesture {
+                            selectedItem = item
+                        }
                     }
                 }
                 .padding()
             }
+        }
+        .sheet(item: $selectedItem) { item in
+            ClothingDetailView(item: item)
         }
         .onAppear {
             fetchCloset()
@@ -71,5 +78,79 @@ struct WardrobeView: View {
                 }
             }
         }.resume()
+    }
+}
+
+struct ClothingDetailView: View {
+    let item: Clothing
+    @Environment(UrlStore.self) private var urlStore
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Image
+                    AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img_filename)")) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        ProgressView()
+                    }
+                    .frame(height: 300)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    
+                    // Details
+                    VStack(alignment: .leading, spacing: 12) {
+                        detailRow("Type", item.type.capitalized)
+                        if let subtype = item.subtype {
+                            detailRow("Subtype", subtype.capitalized)
+                        }
+                        detailRow("Fit", item.fit.capitalized)
+                        detailRow("Occasion", item.occasion.capitalized)
+                        
+                        
+                        if !item.tags.isEmpty {
+                            Text("Tags")
+                                .fontWeight(.medium)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack {
+                                    ForEach(item.tags) { tag in
+                                        Text(tag.value)
+                                            .font(.caption)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(Color.gray.opacity(0.2))
+                                            .cornerRadius(8)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                }
+            }
+            .navigationTitle("Item Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func detailRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label)
+                .fontWeight(.medium)
+            Spacer()
+            Text(value)
+                .foregroundColor(.secondary)
+        }
     }
 }
