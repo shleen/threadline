@@ -60,11 +60,10 @@ def create_clothing(request):
     if image is None:
         return HttpResponseBadRequest("Required field 'image' not provided. Please try again.")
 
-    # TODO: process tags
-    # tags is optional
+    # Process tags
+    tags = []
     if "tags" in fields:
-        for tag in fileds:
-            pass
+        tags = fields.getlist("tags")
 
     ## Process & upload image to Cloudflare R2
     # Validate filetype
@@ -72,7 +71,6 @@ def create_clothing(request):
         filetype = image.content_type[6:]
     else:
         return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png, jpeg). Please try again.")
-
 
     # Limit image size to 10MB
     if image.size > 10**6:
@@ -106,14 +104,19 @@ def create_clothing(request):
     )
 
     # Insert into database, upload to R2, and retry if error
-
     for attempt in range(5):
         try:
             item.save()
-            break;
+            break
         except:
             if attempt >= 5:
                 return HttpResponseBadRequest("Database Insertion Failure.")
+
+    # Save tags to the database
+    for tag in tags:
+        tag_label, tag_value = tag.split(':')
+        tag_obj = Tags(label=tag_label, value=tag_value, clothing=item, user=user)
+        tag_obj.save()
 
     for attempt in range(5):
         try:
@@ -123,7 +126,6 @@ def create_clothing(request):
             if attempt >= 5:
                 item.delete()
                 return HttpResponseBadRequest("R2 Upload Failure.")
-
 
 def get_closet(request):
     username = request.GET.get('username')
