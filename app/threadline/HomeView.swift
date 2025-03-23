@@ -39,7 +39,7 @@ struct HomeView: View {
                     }
                     .tag(2)
 
-                Text("Placeholder 3")
+                AnalyticsView()
                     .tabItem {
                         Image(systemName: "chart.bar.xaxis")
                         Text("Statistics")
@@ -67,7 +67,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Looking good, \(username)")
                 .font(.system(size: 16, weight: .medium))
-            Text("Tell us what you’re wearing - we’ll use it to show you stats and recommend new outfits.")
+            Text("Tell us what you're wearing - we'll use it to show you stats and recommend new outfits.")
                 .font(.system(size: 12, weight: .light))
             Button(action: { isPresentingLogOutfitView.toggle() }) {
                 Text("Log an outfit")

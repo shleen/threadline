@@ -30,3 +30,4 @@ struct Tag: Codable, Identifiable {
     
     var id: String { label }
 }
+//TODO: Make WardrobeView and LogoutfitView use this model, and make a shared image call function for both views
