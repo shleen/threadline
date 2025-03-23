@@ -81,16 +81,16 @@ def create_clothing(request):
     else:
         return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png, jpeg). Please try again.")
 
+    filename = f"{username}_{round(time.time()*1000)}.{filetype}"
+
+    image_path = save_image_in_tmp(image, filename)
+
     # Compress image
     compress_image(image_path)
 
     # Limit image size to 10MB
     if image.size > 10**6:
         return HttpResponseBadRequest("Provided 'image' is larger than the 10MB limit. Please try again.")
-
-    filename = f"{username}_{round(time.time()*1000)}.{filetype}"
-
-    image_path = save_image_in_tmp(image, filename)
 
     # TODO: Get color
     color_lstar = 0.0
