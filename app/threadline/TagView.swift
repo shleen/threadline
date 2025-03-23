@@ -183,7 +183,10 @@ struct TagView: View {
                 .disabled(!isFormValid())
             }
             .sheet(isPresented: $isImagePickerPresented) {
-                ImagePickerCoordinator(image: $image, sourceType: sourceType)
+                ImagePickerCoordinator(image: $image, sourceType: sourceType) { selectedImage in
+                    // After an image is selected, remove the background
+                    removeBackground(from: selectedImage)
+                }
             }
             .confirmationDialog("Select Image", isPresented: $showingOptions) {
                 Button("Take Photo") {
@@ -300,6 +303,40 @@ struct TagView: View {
             }
         }.resume()
     }
+
+    func removeBackground(from image: UIImage) {
+        var multipart = MultipartRequest()
+        multipart.add(key: "username", value: username)
+        multipart.add(
+            key: "image",
+            fileName: "image.png",
+            fileMimeType: "image/png",
+            fileData: image.pngData()!
+        )
+
+        guard let url = URL(string: "\(urlStore.serverUrl)/background/remove") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(multipart.httpContentTypeHeadeValue, forHTTPHeaderField: "Content-Type")
+        request.httpBody = multipart.httpBody
+
+        // Process in background without blocking UI
+        DispatchQueue.global(qos: .userInitiated).async {
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    print("Background removal error: \(error)")
+                    return
+                }
+
+                guard let data = data,
+                      let processedImage = UIImage(data: data) else { return }
+
+                DispatchQueue.main.async {
+                    self.image = processedImage
+                }
+            }.resume()
+        }
+    }
 }
 
 struct TagView_Previews: PreviewProvider {
@@ -312,6 +349,7 @@ struct ImagePickerCoordinator: UIViewControllerRepresentable {
     @Binding var image: UIImage?
     var sourceType: UIImagePickerController.SourceType
     @Environment(\.presentationMode) var presentationMode
+    var onImageSelected: (UIImage) -> Void
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
@@ -336,6 +374,7 @@ struct ImagePickerCoordinator: UIViewControllerRepresentable {
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             if let image = info[.originalImage] as? UIImage {
                 parent.image = image
+                parent.onImageSelected(image)  // Process background removal in background
             }
             parent.presentationMode.wrappedValue.dismiss()
         }
