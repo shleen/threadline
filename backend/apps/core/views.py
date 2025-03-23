@@ -267,12 +267,13 @@ def get_utilization(request):
 @csrf_exempt
 @require_method('POST')
 def remove_background(request):
-    username = request.GET.get('username')
+    username = request.POST.get('username')
 
     if username is None:
         return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
 
-    image = request.GET.get('image')
+    for _, file in request.FILES.items():
+        image = file
 
     if image is None:
         return HttpResponseBadRequest("Required field 'image' not provided. Please try again.")
