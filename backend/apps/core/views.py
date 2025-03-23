@@ -19,48 +19,34 @@ def create_clothing(request):
     ## Validate and extract request fields
     fields = request.POST
 
-    if "username" in fields:
-        username = fields["username"]
-    else:
-        return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
+    # Required fields
+    required_fields = ["username", "type", "fit", "occasion", "winter"]
+    for field in required_fields:
+        if field not in fields:
+            return HttpResponseBadRequest(f"Required field '{field}' not provided. Please try again.")
 
-    if "type" in fields:
-        clothing_type = fields["type"]
-    else:
-        return HttpResponseBadRequest("Required field 'type' not provided. Please try again.")
+    username = fields["username"]
+    clothing_type = fields["type"]
+    fit = fields["fit"]
+    occasion = fields["occasion"]
+    winter = fields["winter"]
 
-    subtype = None
-    if "subtype" in fields:
-        subtype = fields["subtype"]
+    if winter not in ["True", "False"]:
+        return HttpResponseBadRequest("The value of the field 'winter' must be 'True' or 'False'")
+    winter = winter == "True"
 
-    fit = "LOOSE"
-    # if "fit" in fields:
-    #     fit = fields["fit"]
-    # else:
-    #     return HttpResponseBadRequest("Required field 'fit' not provided. Please try again.")
+    # Optional fields
+    subtype = fields.get("subtype", None)
+    layerable = fields.get("layerable", "False") == "True"
+    precip = fields.get("precip", None)
 
-    layerable = False
-    if "layerable" in fields:
-        layerable = fields["layerable"]
+    # Process tags
+    tags = []
+    if "tags" in fields:
+        tags_string = fields["tags"]
+        tags = tags_string.split(',')
 
-    precip = None
-    if "precip" in fields:
-        precip = fields["precip"]
-
-    occasion = "FORMAL"
-    # if "occasion" in fields:
-    #     occasion = fields["occasion"]
-    # else:
-    #     return HttpResponseBadRequest("Required field 'occasion' not provided. Please try again.")
-
-    winter = False
-    # if "winter" in fields:
-    #     winter = fields["winter"]
-    #     if winter != "True" and winter != "False":
-    #         return HttpResponseBadRequest("The Value of the field 'winter' must be 'True' or 'False'")
-    # else:
-    #     return HttpResponseBadRequest("Required field 'winter' not provided. Please try again.")
-
+    # Process image
     image = None
     for _, file in request.FILES.items():
         image = file
@@ -68,12 +54,6 @@ def create_clothing(request):
     if image is None:
         return HttpResponseBadRequest("Required field 'image' not provided. Please try again.")
 
-    # Process tags
-    tags = []
-    if "tags" in fields:
-        tags = fields.getlist("tags")
-
-    ## Process & upload image to Cloudflare R2
     # Validate filetype
     if image.content_type in ['image/png', 'image/jpeg']:
         filetype = image.content_type[6:]
@@ -124,9 +104,12 @@ def create_clothing(request):
 
     # Save tags to the database
     for tag in tags:
-        tag_label, tag_value = tag.split(':')
-        tag_obj = Tags(label=tag_label, value=tag_value, clothing=item, user=user)
-        tag_obj.save()
+        try:
+            tag_label, tag_value = tag.split(':')
+            tag_obj = Tags(label=tag_label, value=tag_value, clothing=item, user=user)
+            tag_obj.save()
+        except ValueError:
+            return HttpResponseBadRequest("Invalid tag format. Tags should be in 'label:value' format.")
 
     for attempt in range(5):
         try:
