@@ -71,3 +71,7 @@ app/buildServer.json
 **/__pycache__/
 backend/.env
 pyvenv.cfg
+bin/
+lib/
+lib64
+share/
