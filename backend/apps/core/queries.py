@@ -154,7 +154,7 @@ def ranking_query(context):
     """
     Returns the query to perform item ranking.
     """
-    precip_where = "AND 1=0" if context["precip"] is None else "AND precip = " + "\'" + context["precip"] + "\'"
+    precip_where = " WHERE 1=0" if context["precip"] is None else " WHERE precip IS NOT NULL"
 
     return f"""
     WITH 
@@ -275,9 +275,9 @@ def ranking_query(context):
           LIMIT 5)
             UNION
         (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM USER_CLOTHES
+           FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
           WHERE type = 'TOP'
-          {precip_where} 
+            AND precip = '{context["precip"]}' 
           LIMIT 1)
     ),
     RANKED_BOTTOMS AS (
@@ -288,9 +288,9 @@ def ranking_query(context):
           LIMIT 5)
             UNION
         (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM USER_CLOTHES
+           FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
           WHERE type = 'BOTTOM'
-          {precip_where}
+            AND precip = '{context["precip"]}' 
           LIMIT 1)
     ),
     RANKED_OUTERWEAR AS (
@@ -301,9 +301,9 @@ def ranking_query(context):
           LIMIT 5)
             UNION
         (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM USER_CLOTHES
+           FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
           WHERE type = 'OUTERWEAR'
-          {precip_where}
+            AND precip = '{context["precip"]}' 
           LIMIT 1)
     ),
     RANKED_DRESSES AS (
@@ -314,10 +314,10 @@ def ranking_query(context):
           LIMIT 5)
             UNION
         (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM USER_CLOTHES
+           FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
           WHERE type = 'DRESS'
-          {precip_where}
-           LIMIT 1)
+            AND precip = '{context["precip"]}' 
+          LIMIT 1)
     ),
     RANKED_SHOES AS (
         (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
@@ -327,9 +327,9 @@ def ranking_query(context):
           LIMIT 5)
             UNION
         (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM USER_CLOTHES
+           FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
           WHERE type = 'SHOES'
-          {precip_where}
+            AND precip = '{context["precip"]}' 
           LIMIT 1)
     )
 
