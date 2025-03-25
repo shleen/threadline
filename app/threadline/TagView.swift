@@ -20,7 +20,7 @@ struct TagView: View {
     @State private var selectedFit: String? = nil
     @State private var selectedOccasion: String? = nil
     @State private var selectedPrecip: String? = nil
-    @State private var isWinter: String? = nil
+    @State private var winter: String? = nil
     @State private var image: UIImage?
     @State private var isImagePickerPresented = false
     @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
@@ -133,7 +133,7 @@ struct TagView: View {
                     .pickerStyle(MenuPickerStyle())
                     .padding()
                     
-                    Picker("Winter", selection: $isWinter) {
+                    Picker("Winter", selection: $winter) {
                         Text("Select Winter Option").tag(String?.none)
                         ForEach(winterOptions, id: \.self) { option in
                             Text(option).tag(option == "Winter" ? "True" : "False")
@@ -245,7 +245,7 @@ struct TagView: View {
                selectedSubtype != nil &&
                selectedFit != nil &&
                selectedOccasion != nil &&
-               isWinter != nil &&
+               winter != nil &&
                image != nil
     }
 
@@ -259,7 +259,7 @@ struct TagView: View {
         multipart.add(key: "subtype", value: selectedSubtype ?? "")
         multipart.add(key: "fit", value: selectedFit ?? "")
         multipart.add(key: "occasion", value: selectedOccasion ?? "")
-        multipart.add(key: "isWinter", value: isWinter ?? "")
+        multipart.add(key: "winter", value: winter ?? "")
 
         if let selectedPrecip = selectedPrecip {
             multipart.add(key: "precipitation", value: selectedPrecip)
