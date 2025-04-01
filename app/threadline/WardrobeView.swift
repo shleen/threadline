@@ -21,29 +21,37 @@ struct WardrobeView: View {
     ]
     
     var body: some View {
-        VStack {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 10) {
-                    ForEach(clothingItems) { item in
-                        // Construct full URL by combining R2 bucket URL with image filename
-                        AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img_filename)")) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(1, contentMode: .fill)
-                                .frame(width: 100, height: 100)
-                                .clipped()
-                                .cornerRadius(10)
-                        } placeholder: {
-                            ProgressView()
-                                .frame(width: 100, height: 100)
-                        }
-                        .onTapGesture {
-                            selectedItem = item
+        ZStack {
+            Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+            VStack {
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(clothingItems) { item in
+                            // Construct full URL by combining R2 bucket URL with image filename
+                            AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img_filename)")) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(1, contentMode: .fill)
+                                    .frame(width: 100, height: 100)
+                                    .clipped()
+                                    .cornerRadius(10)
+                                    .background(Color.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                    .shadow(color: Color.gray.opacity(0.55), radius: 20, x: 0, y: 5)
+                                    .padding(.top, 15)
+                            } placeholder: {
+                                ProgressView()
+                                    .frame(width: 100, height: 100)
+                            }
+                            .onTapGesture {
+                                selectedItem = item
+                            }
                         }
                     }
+                    .padding()
                 }
-                .padding()
             }
+            .navigationTitle(Text("Wardrobe"))
         }
         .sheet(item: $selectedItem) { item in
             ClothingDetailView(item: item)
