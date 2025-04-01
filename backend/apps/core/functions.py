@@ -6,6 +6,7 @@ from .models import User
 from .queries import *
 from PIL import Image
 from rembg import remove
+from colorthief import ColorThief
 import os
 import requests
 import tempfile
@@ -158,6 +159,12 @@ def img_bg_rm(file_path):
     input = Image.open(file_path)
     output = remove(input)
     output.save(file_path)
+
+# Expects path to a png image with background removed
+# Returns List of tuples representing RGB values
+def extract_palette(file_path, num_colors=2):
+    color_thief = ColorThief(file_path)
+    return color_thief.get_palette(color_count=num_colors)
 
 def get_weather(lat, lon):
     """
