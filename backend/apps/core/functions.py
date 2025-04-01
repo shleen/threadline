@@ -164,7 +164,7 @@ def img_bg_rm(file_path):
 # Returns List of tuples representing RGB values
 def extract_palette(file_path, num_colors=2):
     color_thief = ColorThief(file_path)
-    return color_thief.get_palette(color_count=num_colors)
+    return color_thief.get_palette(color_count=num_colors, quality=1)
 
 def get_weather(lat, lon):
     """
