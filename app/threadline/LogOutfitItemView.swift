@@ -14,7 +14,7 @@ struct LogOutfitItemView: View {
 
     @State private var isSelected = false
 
-    let size: Double = 64
+    let size: Double = 80
     let item: LogOutfitItem
 
     var body: some View {
@@ -39,8 +39,13 @@ struct LogOutfitItemView: View {
                     .foregroundStyle(isSelected ? Color.accentColor : .secondary)
                     .accessibility(label: Text(isSelected ? "Checked" : "Unchecked"))
                     .imageScale(.large)
+                    .padding([.bottom, .trailing], 7)
             }
         }
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: Color.gray.opacity(0.25), radius: 20, x: 0, y: 5)
+        .padding(.top, 10)
         .onTapGesture {
             isSelected.toggle()
 

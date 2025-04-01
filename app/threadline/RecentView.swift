@@ -30,31 +30,40 @@ struct RecentView: View {
     @State private var outfits: [RecentOutfit] = []
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                ForEach(outfits, id: \.outfit_id) { outfit in
-                    VStack(alignment: .leading) {
-                        Text("Date: \(convertUTCToLocal(outfit.timestamp))")
-                            .font(.headline)
-                            .padding(.leading)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
-                                outfitCategory(outfit.TOP)
-                                outfitCategory(outfit.BOTTOM)
-                                outfitCategory(outfit.OUTERWEAR)
-                                outfitCategory(outfit.DRESS)
-                                outfitCategory(outfit.SHOES)
+        NavigationView {
+            ZStack {
+                Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+                
+                ScrollView {
+                    VStack(spacing: 20) {
+                        ForEach(outfits, id: \.outfit_id) { outfit in
+                            VStack(alignment: .leading) {
+                                Text("\(convertUTCToLocal(outfit.timestamp))")
+                                    .font(.headline)
+                                    .padding([.leading, .top], 16)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 5) {
+                                        outfitCategory(outfit.TOP)
+                                        outfitCategory(outfit.BOTTOM)
+                                        outfitCategory(outfit.OUTERWEAR)
+                                        outfitCategory(outfit.DRESS)
+                                        outfitCategory(outfit.SHOES)
+                                    }
+                                    .padding(.horizontal)
+                                }
                             }
-                            .padding(.horizontal)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .shadow(color: Color.gray.opacity(0.65), radius: 20, x: 0, y: 5)
                         }
                     }
+                    .padding()
                 }
+                .onAppear {
+                    fetchOutfits()
+                }
+                .navigationTitle(Text("Previous Outfits"))
             }
-            .padding()
-        }
-        .onAppear {
-            fetchOutfits()
         }
     }
     
@@ -66,7 +75,7 @@ struct RecentView: View {
         if let utcDate = formatter.date(from: utcString) {
             let localFormatter = DateFormatter()
             localFormatter.dateStyle = .medium
-            localFormatter.timeStyle = .short
+//            localFormatter.timeStyle = .short
             localFormatter.timeZone = .current // Convert to local time
 
             return localFormatter.string(from: utcDate)
@@ -93,9 +102,11 @@ struct RecentView: View {
             case .success(let image):
                 image.resizable()
                     .scaledToFit()
-                    .frame(width: 80, height: 80)
+                    .frame(width: 110, height: 110)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .shadow(radius: 5)
+                    .padding(.bottom, 30)
+                    .padding(.top, 10)
             case .failure:
                 Image(systemName: "photo")
                     .resizable()

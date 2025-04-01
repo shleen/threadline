@@ -16,7 +16,8 @@ struct HomeView: View {
     @State private var selectedTab: Int = 0
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
+            Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
             TabView(selection: $selectedTab) {
                 mainContent
                     .tabItem {
@@ -46,13 +47,6 @@ struct HomeView: View {
                     }
                     .tag(3)
 
-                // TODO: Replace Text with correct View
-                Text("Placeholder 4")
-                    .tabItem {
-                        Image(systemName: "person.fill")
-                        Text("Profile")
-                    }
-                    .tag(4)
             }
             
             // Shadow effect at the top of the navbar
@@ -65,46 +59,71 @@ struct HomeView: View {
     }
 
     var mainContent: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Looking good, \(username)")
-                .font(.system(size: 16, weight: .medium))
-            Text("Tell us what you're wearing - we'll use it to show you stats and recommend new outfits.")
-                .font(.system(size: 12, weight: .light))
-            Button(action: { isPresentingLogOutfitView.toggle() }) {
-                Text("Log an outfit")
-                    .font(.system(size: 16, weight: .regular))
-                    // Note that call to .frame must come before the call to .buttonStyle for the
-                    // button to actually fill the entire width of the screen
-                    .frame(maxWidth: .infinity)
+        ZStack {
+            Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+            VStack(alignment: .leading, spacing: 4) {
+                VStack {
+                    Text("Looking good, \(username)")
+                        .font(.system(size: 18, weight: .medium))
+                        .padding(.top, 40)
+                    Text("Tell us what you're wearing - we'll use it to show you stats and recommend new outfits.")
+                        .font(.system(size: 14, weight: .light))
+                        .padding(.bottom, 10)
+                        .padding(.top, 4)
+                        .padding(.horizontal, 4)
+                    Button(action: { isPresentingLogOutfitView.toggle() }) {
+                        Text("Log an outfit")
+                            .font(.system(size: 18, weight: .regular))
+                        // Note that call to .frame must come before the call to .buttonStyle for the
+                        // button to actually fill the entire width of the screen
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 15)
+                }
+                
+                VStack {
+                    Button(action: { isPresentingWardrobeView.toggle() }) {
+                        Text("Wardrobe")
+                            .font(.system(size: 18, weight: .regular))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.top, 4)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 15)
+                }
+                
+                VStack {
+                    Button(action: {isPresentingGenerateView.toggle() }) {
+                        Text("Generate an Outfit")
+                            .font(.system(size: 18, weight: .regular))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.top, 4)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 15)
+                    .padding(.bottom, 30)
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .padding(.top, 4)
-
-            Button(action: { isPresentingWardrobeView.toggle() }) {
-                Text("Wardrobe")
-                    .font(.system(size: 16, weight: .regular))
-                    .frame(maxWidth: .infinity)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y: 5)
+            .padding(.horizontal, 16)
+            .navigationDestination(isPresented: $isPresentingLogOutfitView) {
+                LogOutfitView(isPresented: $isPresentingLogOutfitView, items: [])
             }
-            .buttonStyle(.borderedProminent)
-            .padding(.top, 4)
-            
-            Button(action: {isPresentingGenerateView.toggle() }) {
-                Text("Generate an Outfit")
-                    .font(.system(size: 16, weight: .regular))
-                    .frame(maxWidth: .infinity)
+            .navigationDestination(isPresented: $isPresentingWardrobeView) {
+                WardrobeView()
             }
-            .buttonStyle(.borderedProminent)
-            .padding(.top, 4)
-        }
-        .padding(.horizontal, 16)
-        .navigationDestination(isPresented: $isPresentingLogOutfitView) {
-            LogOutfitView(isPresented: $isPresentingLogOutfitView, items: [])
-        }
-        .navigationDestination(isPresented: $isPresentingWardrobeView) {
-            WardrobeView()
-        }
-        .navigationDestination(isPresented: $isPresentingGenerateView) {
-            GenerateView()
+            .navigationDestination(isPresented: $isPresentingGenerateView) {
+                GenerateView()
+            }
         }
     }
 }

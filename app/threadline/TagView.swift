@@ -38,187 +38,190 @@ struct TagView: View {
     let winterOptions = ["Winter", "Not Winter"]
 
     var body: some View {
-        ScrollView {
-            VStack {
-                Button(action: {
-                    showingOptions = true
-                }) {
-                    if let displayImage = image {
-                        Image(uiImage: displayImage)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 200)
-                            .padding()
-                    } else {
-                        VStack {
-                            Image(systemName: "photo")
+        ZStack {
+            Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+            ScrollView {
+                VStack {
+                    Button(action: {
+                        showingOptions = true
+                    }) {
+                        if let displayImage = image {
+                            Image(uiImage: displayImage)
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: 60, height: 60)
-                                .foregroundColor(.gray)
-                            Text("Upload an image")
-                                .foregroundColor(.gray)
+                                .frame(height: 200)
+                                .padding()
+                        } else {
+                            VStack {
+                                Image(systemName: "photo")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 60, height: 60)
+                                    .foregroundColor(.gray)
+                                Text("Upload an image")
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(height: 200)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(8)
                         }
-                        .frame(height: 200)
-                        .frame(maxWidth: .infinity)
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(8)
-                    }
-                }.padding()
-
-                HStack {
-                    TextField("Enter tag", text: $newTag)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding(.horizontal)
-
-                    Button(action: {
-                        if !newTag.isEmpty {
-                            tags.append(newTag)
-                            newTag = ""
-                        }
-                    }) {
-                        Text("Add Tag")
+                    }.padding()
+                    
+                    HStack {
+                        TextField("Enter tag", text: $newTag)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
                             .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .background(Color.blue)
+                        
+                        Button(action: {
+                            if !newTag.isEmpty {
+                                tags.append(newTag)
+                                newTag = ""
+                            }
+                        }) {
+                            Text("Add Tag")
+                                .padding(.horizontal)
+                                .padding(.vertical, 8)
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
+                    }
+                    .padding()
+                    
+                    Picker("Select Category", selection: $selectedCategory) {
+                        Text("Select Category").tag(String?.none)
+                        ForEach(categories, id: \.self) { category in
+                            Text(category).tag(String?.some(category))
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .padding()
+                    
+                    if let selectedCategory = selectedCategory {
+                        Picker("Select Subtype", selection: $selectedSubtype) {
+                            Text("Select Subtype").tag(String?.none)
+                            ForEach(getSubtypes(for: selectedCategory), id: \.self) { subtype in
+                                Text(subtype).tag(String?.some(subtype))
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                        .padding()
+                        
+                        Picker("Select Fit", selection: $selectedFit) {
+                            Text("Select Fit").tag(String?.none)
+                            ForEach(fits, id: \.self) { fit in
+                                Text(fit).tag(String?.some(fit))
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                        .padding()
+                        
+                        Picker("Select Occasion", selection: $selectedOccasion) {
+                            Text("Select Occasion").tag(String?.none)
+                            ForEach(occasions, id: \.self) { occasion in
+                                Text(occasion).tag(String?.some(occasion))
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                        .padding()
+                        
+                        Picker("Select Precipitation", selection: $selectedPrecip) {
+                            Text("Select Precipitation").tag(String?.none)
+                            ForEach(precips, id: \.self) { precip in
+                                Text(precip).tag(String?.some(precip))
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                        .padding()
+                        
+                        Picker("Winter", selection: $winter) {
+                            Text("Select Winter Option").tag(String?.none)
+                            ForEach(winterOptions, id: \.self) { option in
+                                Text(option).tag(option == "Winter" ? "True" : "False")
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                        .padding()
+                    }
+                    
+                    ScrollView(.horizontal) {
+                        HStack {
+                            ForEach(tags, id: \.self) { tag in
+                                HStack {
+                                    Text(tag)
+                                        .padding(.horizontal)
+                                        .padding(.vertical, 8)
+                                        .background(Color.gray.opacity(0.2))
+                                        .cornerRadius(16)
+                                    Button(action: {
+                                        if let index = tags.firstIndex(of: tag) {
+                                            tags.remove(at: index)
+                                        }
+                                    }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.red)
+                                    }
+                                }
+                                .padding(.horizontal, 4)
+                            }
+                        }
+                        .padding()
+                    }
+                    Spacer()
+                    
+                    Button(action: {
+                        // Handle done action
+                        createClothingItem()
+                    }) {
+                        Text("Done")
+                            .padding(.horizontal)
+                            .padding(.vertical, 12)
+                            .background(isFormValid() ? Color.green : Color.gray)
                             .foregroundColor(.white)
                             .cornerRadius(8)
                     }
-                }
-                .padding()
-                
-                Picker("Select Category", selection: $selectedCategory) {
-                    Text("Select Category").tag(String?.none)
-                    ForEach(categories, id: \.self) { category in
-                        Text(category).tag(String?.some(category))
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-                .padding()
-
-                if let selectedCategory = selectedCategory {
-                    Picker("Select Subtype", selection: $selectedSubtype) {
-                        Text("Select Subtype").tag(String?.none)
-                        ForEach(getSubtypes(for: selectedCategory), id: \.self) { subtype in
-                            Text(subtype).tag(String?.some(subtype))
-                        }
-                    }
-                    .pickerStyle(MenuPickerStyle())
                     .padding()
-                    
-                    Picker("Select Fit", selection: $selectedFit) {
-                        Text("Select Fit").tag(String?.none)
-                        ForEach(fits, id: \.self) { fit in
-                            Text(fit).tag(String?.some(fit))
-                        }
+                    .disabled(!isFormValid())
+                }
+                .sheet(isPresented: $isImagePickerPresented) {
+                    ImagePickerCoordinator(image: $image, sourceType: sourceType) { selectedImage in
+                        // After an image is selected, remove the background
+                        removeBackground(from: selectedImage)
                     }
-                    .pickerStyle(MenuPickerStyle())
-                    .padding()
-                    
-                    Picker("Select Occasion", selection: $selectedOccasion) {
-                        Text("Select Occasion").tag(String?.none)
-                        ForEach(occasions, id: \.self) { occasion in
-                            Text(occasion).tag(String?.some(occasion))
-                        }
+                }
+                .confirmationDialog("Select Image", isPresented: $showingOptions) {
+                    Button("Take Photo") {
+                        sourceType = .camera
+                        isImagePickerPresented = true
                     }
-                    .pickerStyle(MenuPickerStyle())
-                    .padding()
-
-                    Picker("Select Precipitation", selection: $selectedPrecip) {
-                        Text("Select Precipitation").tag(String?.none)
-                        ForEach(precips, id: \.self) { precip in
-                            Text(precip).tag(String?.some(precip))
-                        }
+                    Button("Choose from Library") {
+                        sourceType = .photoLibrary
+                        isImagePickerPresented = true
                     }
-                    .pickerStyle(MenuPickerStyle())
-                    .padding()
-                    
-                    Picker("Winter", selection: $winter) {
-                        Text("Select Winter Option").tag(String?.none)
-                        ForEach(winterOptions, id: \.self) { option in
-                            Text(option).tag(option == "Winter" ? "True" : "False")
-                        }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Upload an image of a clothing item to get started.")
+                }
+                .onAppear {
+                    // Show options dialog when view appears
+                    showingOptions = true
+                }
+                .overlay(alignment: .bottom) {
+                    if showSuccessSnackbar {
+                        Text("\(selectedCategory ?? "Item") created successfully!")
+                            .padding()
+                            .background(Color.green)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                            .padding(.bottom)
+                            .transition(.move(edge: .bottom))
                     }
-                    .pickerStyle(MenuPickerStyle())
-                    .padding()
                 }
-
-                ScrollView(.horizontal) {
-                    HStack {
-                        ForEach(tags, id: \.self) { tag in
-                            HStack {
-                                Text(tag)
-                                    .padding(.horizontal)
-                                    .padding(.vertical, 8)
-                                    .background(Color.gray.opacity(0.2))
-                                    .cornerRadius(16)
-                                Button(action: {
-                                    if let index = tags.firstIndex(of: tag) {
-                                        tags.remove(at: index)
-                                    }
-                                }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.red)
-                                }
-                            }
-                            .padding(.horizontal, 4)
-                        }
-                    }
-                    .padding()
+                .animation(.easeInOut, value: showSuccessSnackbar)
+                .navigationDestination(isPresented: $navigateToWardrobe) {
+                    WardrobeView()
                 }
-                Spacer()
-
-                Button(action: {
-                    // Handle done action
-                    createClothingItem()
-                }) {
-                    Text("Done")
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
-                        .background(isFormValid() ? Color.green : Color.gray)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                }
-                .padding()
-                .disabled(!isFormValid())
-            }
-            .sheet(isPresented: $isImagePickerPresented) {
-                ImagePickerCoordinator(image: $image, sourceType: sourceType) { selectedImage in
-                    // After an image is selected, remove the background
-                    removeBackground(from: selectedImage)
-                }
-            }
-            .confirmationDialog("Select Image", isPresented: $showingOptions) {
-                Button("Take Photo") {
-                    sourceType = .camera
-                    isImagePickerPresented = true
-                }
-                Button("Choose from Library") {
-                    sourceType = .photoLibrary
-                    isImagePickerPresented = true
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Upload an image of a clothing item to get started.")
-            }
-            .onAppear {
-                // Show options dialog when view appears
-                showingOptions = true
-            }
-            .overlay(alignment: .bottom) {
-                if showSuccessSnackbar {
-                    Text("\(selectedCategory ?? "Item") created successfully!")
-                        .padding()
-                        .background(Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                        .padding(.bottom)
-                        .transition(.move(edge: .bottom))
-                }
-            }
-            .animation(.easeInOut, value: showSuccessSnackbar)
-            .navigationDestination(isPresented: $navigateToWardrobe) {
-                WardrobeView()
             }
         }
     }

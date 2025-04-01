@@ -57,54 +57,57 @@ struct LogOutfitView: View {
     }
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text("What are you wearing today?")
-                .font(.system(size: 18, weight: .regular))
-                .padding(.bottom, 16)
-            ScrollView {
-                LazyVGrid(columns: gridColumns) {
-                    ForEach(items) { item in
-                        LogOutfitItemView(selectedItems: $selectedItems, item: item)
+        ZStack {
+            Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+            VStack(spacing: 4) {
+                Text("What are you wearing today?")
+                    .font(.headline)
+                    .padding(.bottom, 16)
+                ScrollView {
+                    LazyVGrid(columns: gridColumns) {
+                        ForEach(items) { item in
+                            LogOutfitItemView(selectedItems: $selectedItems, item: item)
+                        }
                     }
                 }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 16)
-        }
-        .toolbar {
-            Button(action: saveOutfit) {
-                Text("Done")
+            .toolbar {
+                Button(action: saveOutfit) {
+                    Text("Done")
+                }
+                .disabled(selectedItems.isEmpty)
             }
-            .disabled(selectedItems.isEmpty)
-        }
-        .onAppear {
-            // Call backend to populate clothing
-            guard let apiUrl = URL(string: "\(urlStore.serverUrl)\(closetGetRoute)?username=\(username)") else {
-                print("\(closetGetRoute): Bad URL")
-                return
-            }
-
-            var request = URLRequest(url: apiUrl)
-            request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Accept") // expect response in JSON
-            request.httpMethod = "GET"
-
-            Task(priority: .background) {
-                let (data, response) = try await URLSession.shared.data(for: request)
-
-                if let httpStatus = response as? HTTPURLResponse, httpStatus.statusCode != 200 {
-                    print("\(closetGetRoute): HTTP STATUS: \(httpStatus.statusCode)")
+            .onAppear {
+                // Call backend to populate clothing
+                guard let apiUrl = URL(string: "\(urlStore.serverUrl)\(closetGetRoute)?username=\(username)") else {
+                    print("\(closetGetRoute): Bad URL")
                     return
                 }
-
-                guard let clothingReceived = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                    print("\(closetGetRoute): failed JSON deserialization")
-                    return
-                }
-
-                for c in clothingReceived["items"] as! [[String: Any]] {
-                    if let id  = c["id"] as? Int, let img_filename = c["img_filename"] as? String {
-                        items.append(
-                            LogOutfitItem(id: id, img_filename: img_filename)
-                        )
+                
+                var request = URLRequest(url: apiUrl)
+                request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Accept") // expect response in JSON
+                request.httpMethod = "GET"
+                
+                Task(priority: .background) {
+                    let (data, response) = try await URLSession.shared.data(for: request)
+                    
+                    if let httpStatus = response as? HTTPURLResponse, httpStatus.statusCode != 200 {
+                        print("\(closetGetRoute): HTTP STATUS: \(httpStatus.statusCode)")
+                        return
+                    }
+                    
+                    guard let clothingReceived = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                        print("\(closetGetRoute): failed JSON deserialization")
+                        return
+                    }
+                    
+                    for c in clothingReceived["items"] as! [[String: Any]] {
+                        if let id  = c["id"] as? Int, let img_filename = c["img_filename"] as? String {
+                            items.append(
+                                LogOutfitItem(id: id, img_filename: img_filename)
+                            )
+                        }
                     }
                 }
             }

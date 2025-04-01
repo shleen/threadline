@@ -55,38 +55,83 @@ struct AnalyticsView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    if isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if let error = errorMessage {
-                        Text(error)
-                            .foregroundColor(.red)
-                            .frame(maxWidth: .infinity)
-                    } else {
-                        // Utilization Section
-                        if let utilization = utilization {
-                            utilizationSection(utilization)
-                        }
-                        
-                        // Most Reworn Section
-                        if let rewears = rewears {
-                            rewornSection(rewears)
+            ZStack {
+                Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        if isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if let error = errorMessage {
+                            Text(error)
+                                .foregroundColor(.red)
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            
+                            // Utilization Section
+                            if let utilization = utilization {
+                                totalUtilSection(utilization)
+                                utilizationSection(utilization)
+                            }
+                            
+                            // Most Reworn Section
+                            if let rewears = rewears {
+                                rewornSection(rewears)
+                            }
                         }
                     }
+                    .padding()
                 }
-                .padding()
-            }
-            .navigationTitle("Wardrobe Analytics")
-            .refreshable {
-                await fetchStats()
+                .navigationTitle(Text("Wardrobe Analytics"))
+                .refreshable {
+                    await fetchStats()
+                }
             }
         }
         .onAppear {
             Task {
                 await fetchStats()
             }
+        }
+    }
+    
+    private func totalUtilSection(_ utilization: UtilizationData) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Total Wardrobe Utilization")
+                .font(.headline)
+            
+            ZStack {
+                /*
+                 Circular Progress Bar code derived from this online tutorial
+                 https://sarunw.com/posts/swiftui-circular-progress-bar/
+                 */
+                Circle()
+                    .stroke(
+                        Color.green.opacity(0.35),
+                        lineWidth: 20
+                    )
+                    .frame(width: 150, height: 150)
+                    .padding(.vertical, 40)
+                    .padding(.horizontal, 110)
+                Text("\(Int(utilization.totalValue * 100))%")
+                    .font(.title)
+                Circle()
+                    .trim(from: 0, to: utilization.totalValue) // 1
+                    .stroke(
+                        Color.green,
+                        style: StrokeStyle(
+                            lineWidth: 20,
+                            lineCap: .round
+                        )
+                    )
+                    .frame(width: 150, height: 150)
+                    .padding(.vertical, 40)
+                    .padding(.horizontal, 110)
+                    .rotationEffect(.degrees(-90))
+            }
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y: 5)
         }
     }
     
@@ -102,14 +147,18 @@ struct AnalyticsView: View {
             }
             
             VStack(alignment: .leading, spacing: 12) {
-                utilizationRow("Total Wardrobe", utilization.totalValue)
-                utilizationRow("Tops", utilization.topValue)
-                utilizationRow("Bottoms", utilization.bottomValue)
-                utilizationRow("Outerwear", utilization.outerwearValue)
-                utilizationRow("Dresses", utilization.dressValue)
-                utilizationRow("Shoes", utilization.shoesValue)
+                utilizationRow("👕 Tops", utilization.topValue)
+                utilizationRow("🩳 Bottoms", utilization.bottomValue)
+                utilizationRow("🧥 Outerwear", utilization.outerwearValue)
+                utilizationRow("👗 Dresses", utilization.dressValue)
+                utilizationRow("👠 Shoes", utilization.shoesValue)
             }
-            .padding(.horizontal)
+            .padding(.leading, 25)
+            .padding(.bottom, 15)
+            .padding(.top, 15)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
         }
     }
     
@@ -117,6 +166,7 @@ struct AnalyticsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Most Worn Items")
                 .font(.headline)
+                .padding(.top, 8)
             
             if isAllEmpty(rewears) {
                 Text("No items have been worn multiple times this month")
@@ -141,6 +191,10 @@ struct AnalyticsView: View {
                     }
                 }
                 .padding(.horizontal)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y: 5)
+                
             }
         }
     }
@@ -150,6 +204,9 @@ struct AnalyticsView: View {
             Text(label)
             Spacer()
             // Create a progress bar with the percentage
+            Text("\(Int(value * 100))%")
+                .font(.body)
+                .padding(.trailing, 4)
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(Color.gray.opacity(0.2))
@@ -159,11 +216,8 @@ struct AnalyticsView: View {
                     .fill(value > 0 ? Color.blue : Color.gray.opacity(0.3))
                     .frame(width: max(4, 100 * CGFloat(value)), height: 20)
                 
-                Text("\(Int(value * 100))%")
-                    .font(.caption)
-                    .foregroundColor(.white)
-                    .padding(.leading, 4)
             }
+            .padding(.trailing, 40)
         }
     }
     
@@ -189,7 +243,6 @@ struct AnalyticsView: View {
             }
             
             Spacer()
-            
             Image(systemName: "chevron.right")
                 .foregroundColor(.secondary)
         }
