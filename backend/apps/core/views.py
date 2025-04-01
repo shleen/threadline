@@ -280,3 +280,41 @@ def remove_background(request):
     bg_free_image_file = open(image_path, 'rb')
     return FileResponse(bg_free_image_file, content_type='image/png')
 
+@csrf_exempt
+@require_method('POST')
+def process_image(request):
+    username = request.POST.get('username')
+
+    if username is None:
+        return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
+
+    for _, file in request.FILES.items():
+        image = file
+
+    if image is None:
+        return HttpResponseBadRequest("Required field 'image' not provided. Please try again.")
+
+    if image.content_type in ['image/png']:
+        filetype = image.content_type[6:]
+    else:
+        return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png). Please try again.")
+
+    # Save Image to tempdir,
+    filename = f"{username}_{round(time.time()*1000)}.{filetype}"
+    image_path = save_image_in_tmp(image, filename)
+
+    #remove image background
+    img_bg_rm(image_path)
+
+    color_palette = extract_palette(image_path)
+    json_data = json.dumps([{"r": r, "g": g, "b": b} for r, g, b in color_palette], indent=2)
+
+    # Sadly, Django does not support multipart HTTP Response
+    # Open image as base64 encoded string
+    with open(image_path, "rb") as img_file:
+        encoded_string = base64.b64encode(img_file.read()).decode('utf-8')
+
+    return JsonResponse({
+        "colors": json_data,
+        "image_base64": f"data:image/png;base64,{encoded_string}"
+    })
