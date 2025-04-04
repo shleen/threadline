@@ -6,6 +6,7 @@ from .models import User
 from .queries import *
 from PIL import Image
 from rembg import remove
+from itertools import groupby
 import os
 import requests
 import tempfile
@@ -78,24 +79,21 @@ def pull_past_outfits(context):
     records = execute_read_query(prev_outfit_query(), [context["username"]])
 
     # Flatten records into outfits
-    outfit_dict = {}
-    for rec in records:
-        outfit_id = rec["outfit_id"]
-        outfit = outfit_dict.get(outfit_id,
-            {k: None for k in ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]})
-
-        outfit["outfit_id"] = outfit_id
-        outfit["timestamp"] = rec["date_worn"]
-
-        garment = {"clothing_id": rec["clothing_id"], "img": rec["img_filename"]}
-        if outfit[rec["type"]] is None:
-            outfit[rec["type"]] = [garment]
-        else:
-            outfit[rec["type"]].append(garment)
-
-        outfit_dict[outfit_id] = outfit
-
-    return sorted(list(outfit_dict.values()), key=lambda outfit: outfit["timestamp"], reverse=True)[:15]
+    return sorted([
+        {
+            "outfit_id": outfit_id,
+            "timestamp": timestamp,
+            "clothes": [
+                {
+                    "clothing_id": cloth["clothing_id"],
+                    "img": cloth["img_filename"]
+                } 
+                for cloth in group
+            ]
+        }
+        for (outfit_id, timestamp),  group in groupby(
+            records, lambda cloth: (cloth["outfit_id"], cloth["date_worn"]))
+    ], key=lambda outfit: outfit["timestamp"], reverse=True)
 
 
 

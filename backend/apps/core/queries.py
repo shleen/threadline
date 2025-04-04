@@ -22,7 +22,7 @@ def prev_outfit_query():
     Returns the query to fetch up to 15 previously worn outfits
     """
     return """
-        SELECT O1.outfit_id, O1.clothing_id, C.type, C.img_filename, O2.date_worn
+        SELECT O1.outfit_id, O1.clothing_id, C.img_filename, O2.date_worn
           FROM core_outfititem O1
           JOIN core_outfit O2
             ON O1.outfit_id = O2.id
@@ -31,6 +31,7 @@ def prev_outfit_query():
           JOIN core_user U
             ON U.id = C.user_id
          WHERE U.username = %s
+      ORDER BY O1.outfit_id
     """
 
 
