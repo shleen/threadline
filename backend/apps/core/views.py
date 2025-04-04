@@ -72,6 +72,7 @@ def create_clothing(request):
         return HttpResponseBadRequest("Provided 'image' is larger than the 10MB limit. Please try again.")
 
     # TODO: Get color
+    # Instead running colorthief once more, have front end pass it in
     color_lstar = 0.0
     color_astar = 0.0
     color_bstar = 0.0
