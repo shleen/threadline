@@ -20,7 +20,7 @@ def create_clothing(request):
     fields = request.POST
 
     # Required fields
-    required_fields = ["username", "type", "fit", "occasion", "winter"]
+    required_fields = ["username", "type", "fit", "occasion", "winter", "red", "green", "blue"]
     for field in required_fields:
         if field not in fields:
             return HttpResponseBadRequest(f"Required field '{field}' not provided. Please try again.")
@@ -64,18 +64,16 @@ def create_clothing(request):
 
     image_path = save_image_in_tmp(image, filename)
 
-    # Compress image
-    compress_image(image_path)
-
     # Limit image size to 10MB
     if os.path.isfile(filename) and os.path.getsize(image_path) > 10**6:
         return HttpResponseBadRequest("Provided 'image' is larger than the 10MB limit. Please try again.")
 
     # TODO: Get color
-    # Instead running colorthief once more, have front end pass it in
-    color_lstar = 0.0
-    color_astar = 0.0
-    color_bstar = 0.0
+    red = fields["red"]
+    green = fields["green"]
+    blue = fields["blue"]
+
+    (color_lstar, color_astar, color_bstar) = rgb_to_lab((red, green, blue))
 
     ## Insert clothing item to DB
     user = get_or_create_user(username)
@@ -141,9 +139,6 @@ def get_closet(request):
         'type',
         'subtype',
         'img_filename',
-        'color_lstar',
-        'color_astar',
-        'color_bstar',
         'fit',
         'layerable',
         'precip',
@@ -151,9 +146,19 @@ def get_closet(request):
         'winter',
         'created_at'
     ))
-    # Add tags to each item
+
     for item in clothing_list:
+        # Add tags to each item
         item['tags'] = list(Tags.objects.filter(clothing_id=item['id']).values('label', 'value'))
+        # Add RGB Values converted from CIELAB
+        lstar = Clothing.objects.filter(clothing_id=item['id'].values('color_lstar'))
+        astar = Clothing.objects.filter(clothing_id=item['id'].values('color_astar'))
+        bstar = Clothing.objects.filter(clothing_id=item['id'].values('color_bstar'))
+        (r,g,b) = lab_to_rgb((lstar,astar,bstar))
+        item['red'] = r
+        item['green'] = g
+        item['blue'] = b
+
 
     response_data = {'items': clothing_list}
     return JsonResponse(response_data)
@@ -308,6 +313,10 @@ def process_image(request):
     img_bg_rm(image_path)
 
     color_palette = extract_palette(image_path)[:2]
+
+    # Compress image
+    compress_image(image_path)
+
     # json_data = json.dumps([{"r": r, "g": g, "b": b} for r, g, b in color_palette], indent=2)
     json_data = json.dumps(color_palette)
 

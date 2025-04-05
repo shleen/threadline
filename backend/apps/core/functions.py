@@ -265,3 +265,34 @@ def rgb_to_lab(rgb):
     b = (y - z) * 200
 
     return (l, a, b)
+
+def lab_to_rgb(lab):
+    # Constants
+    ref_x =  0.95047
+    ref_y =  1.00000
+    ref_z =  1.08883
+
+    # Unpack the lab values
+    l, a, b = lab
+
+    # Normalize L, a, b to the range [0, 100] for L, and [-128, 128] for a, b
+    fy = (l + 16) / 116
+    fx = a / 500 + fy
+    fz = fy - b / 200
+
+    # Convert to XYZ
+    x = ref_x * (fx ** 3 if fx ** 3 > 0.008856 else (fx - 16 / 116) / 7.787)
+    y = ref_y * (fy ** 3 if fy ** 3 > 0.008856 else (fy - 16 / 116) / 7.787)
+    z = ref_z * (fz ** 3 if fz ** 3 > 0.008856 else (fz - 16 / 116) / 7.787)
+
+    # Convert to RGB
+    rgb = [x * 3.2406 - y * 1.5372 - z * 0.4986,
+           -x * 0.9689 + y * 1.8758 + z * 0.0415,
+           x * 0.0556 - y * 0.2040 + z * 1.0570]
+
+    # Gamma correction and clamping to [0, 255]
+    for i in range(3):
+        rgb[i] = 255 * (rgb[i] if rgb[i] <= 0.0031308 else (1.055 * (rgb[i] ** (1/2.4))) - 0.055)
+        rgb[i] = max(0, min(255, round(rgb[i])))
+
+    return tuple(rgb)
