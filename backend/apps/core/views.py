@@ -105,8 +105,7 @@ def create_clothing(request):
     # Save tags to the database
     for tag in tags:
         try:
-            tag_label, tag_value = tag.split(':')
-            tag_obj = Tags(label=tag_label, value=tag_value, clothing=item, user=user)
+            tag_obj = Tags(value=tag, clothing=item, user=user)
             tag_obj.save()
         except ValueError:
             return HttpResponseBadRequest("Invalid tag format. Tags should be in 'label:value' format.")

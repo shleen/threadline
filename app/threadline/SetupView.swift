@@ -27,16 +27,20 @@ struct SetupView: View {
     }
 
     var body: some View {
-        HStack() {
-            VStack(spacing: 10) {
-                Text("Hello! Welcome to threadline.")
-                    .font(.system(size: 24, weight: .light))
-                Text("Please choose a username to get started.")
-                    .font(.system(size: 16, weight: .light))
-                TextField(
-                    "centralpassage",
-                    text: $localUsername
-                )
+        ZStack {
+            Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+            HStack() {
+                VStack(spacing: 10) {
+                    Text("Hello! Welcome to threadline.")
+                        .font(.system(size: 24, weight: .light))
+                        .padding(.top, 15)
+                    Text("Please choose a username to get started.")
+                        .font(.system(size: 16, weight: .light))
+                    TextField(
+                        "centralpassage",
+                        text: $localUsername
+                    )
+                    .padding(.horizontal, 14)
                     .onSubmit {
                         validateUsername()
                     }
@@ -44,18 +48,24 @@ struct SetupView: View {
                     .disableAutocorrection(true)
                     .padding(.top, 10)
                     .textFieldStyle(.roundedBorder)
-                Text("Username must contain only alphanumeric characters and have at least 3 characters. Please try again.")
-                    .foregroundColor(.red)
-                    .opacity(validUsername ? 0 : 1)
-                    .font(.system(size: 10, weight: .light))
-                HStack() {
-                    Spacer()
-                    Button(action: validateUsername) {
-                        Text("Done")
+                    Text("Username must contain only alphanumeric characters and have at least 3 characters. Please try again.")
+                        .foregroundColor(.red)
+                        .opacity(validUsername ? 0 : 1)
+                        .font(.system(size: 10, weight: .light))
+                    HStack() {
+                        Spacer()
+                        Button(action: validateUsername) {
+                            Text("Done")
+                                .padding(.trailing, 30)
+                        }
+                        .padding(.bottom, 15)
                     }
                 }
             }
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .padding(.horizontal, 16)
+            .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
         }
-        .padding(.horizontal, 30)
     }
 }
