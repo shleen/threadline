@@ -206,17 +206,12 @@ def get_recommendations(request):
         return HttpResponseBadRequest("No latitude or longitude provided")
 
     # Get weather at location
-    #conditions = get_weather(float(lat), float(lon))
+    conditions = get_weather(float(lat), float(lon))
     
-    # context = { 
-    #     "username": username, 
-    #     "weather": conditions["weather"], 
-    #     "precip": conditions["precip"]
-    # }
     context = { 
         "username": username, 
-        "weather": 'SUMMER', 
-        "precip": None
+        "weather": conditions["weather"], 
+        "precip": conditions["precip"]
     }
     clothes = filter_and_rank(context)
     matched = item_match(clothes)

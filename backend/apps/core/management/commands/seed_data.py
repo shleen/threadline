@@ -35,8 +35,8 @@ class Command(BaseCommand):
         unique_filename = f"{user.username}_{round(time.time() * 1000)}.{filetype}"
 
         local_path = os.path.join(seed_images_folder, chosen_image)
-        # with open(local_path, 'rb') as image_file:
-        #     r2.upload_fileobj(image_file, IMAGE_BUCKET, unique_filename)
+        with open(local_path, 'rb') as image_file:
+            r2.upload_fileobj(image_file, IMAGE_BUCKET, unique_filename)
 
         return unique_filename
 
