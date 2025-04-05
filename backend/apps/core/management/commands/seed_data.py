@@ -35,8 +35,8 @@ class Command(BaseCommand):
         unique_filename = f"{user.username}_{round(time.time() * 1000)}.{filetype}"
 
         local_path = os.path.join(seed_images_folder, chosen_image)
-        with open(local_path, 'rb') as image_file:
-            r2.upload_fileobj(image_file, IMAGE_BUCKET, unique_filename)
+        # with open(local_path, 'rb') as image_file:
+        #     r2.upload_fileobj(image_file, IMAGE_BUCKET, unique_filename)
 
         return unique_filename
 
@@ -64,6 +64,11 @@ class Command(BaseCommand):
         ]
         precips = [None, Clothing.Precip.RAIN, Clothing.Precip.SNOW]
 
+        weathers = [
+            Clothing.Weather.SUMMER,
+            Clothing.Weather.WINTER
+        ]
+
         for user in [user1, user2]:
             for i in range(100):
                 ctype, subtype = random.choice(clothing_types)
@@ -73,7 +78,7 @@ class Command(BaseCommand):
                 fit = random.choice(fits)
                 occasion = random.choice(occasions)
                 precipitation = random.choice(precips)
-                winter = bool(random.getrandbits(1))
+                weather = random.choice(weathers)
                 layerable = bool(random.getrandbits(1))
 
                 # upload a random local image to r2
@@ -94,7 +99,7 @@ class Command(BaseCommand):
                     layerable=layerable,
                     precip=precipitation,
                     occasion=occasion,
-                    winter=winter,
+                    weather=weather,
                     user=user
                 )
 

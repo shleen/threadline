@@ -1,5 +1,6 @@
 from django.db import connection
 
+
 def execute_read_query(sql, params):
     """
     Executes a parameterized raw sql query and makes a dictionary for each record.
@@ -15,6 +16,18 @@ def execute_read_query(sql, params):
         records = [dict(zip(columns, row)) for row in cursor.fetchall()]
     
     return records
+
+def occasion_query():
+    """
+    Returns the subtypes of clothing a user has in their wardrobe
+    """
+    return """
+      SELECT DISTINCT C.occasion
+        FROM core_clothing C
+        JOIN core_user U
+          ON C.user_id = U.id
+       WHERE U.username = %s
+    """
 
 
 def prev_outfit_query():
@@ -84,12 +97,12 @@ def utilization_query():
     """
 
 
-def rewears_query():
+def rewears_query(context):
     """
     Raw SQL query to find the items that were reworn (i.e., worn more than once)
     the most in the last month
     """
-    return """
+    query = """
     WITH
     REWORN_CLOTHES AS (
         SELECT COUNT(*) AS wears, W.id, W.type, W.img_filename
@@ -108,47 +121,30 @@ def rewears_query():
         GROUP BY W.id, W.type, W.img_filename
             HAVING COUNT(*) > 1
     )
-
-    (SELECT R.id, R.type, R.img_filename, R.wears
-        FROM REWORN_CLOTHES R
-        WHERE R.type = 'TOP'
-        AND R.wears = (
-        SELECT MAX(wears)
-        FROM REWORN_CLOTHES
-        WHERE type = 'TOP'))
-    UNION ALL
-    (SELECT R.id, R.type, R.img_filename, R.wears
-        FROM REWORN_CLOTHES R
-        WHERE R.type = 'BOTTOM'
-        AND R.wears = (
-        SELECT MAX(wears)
-        FROM REWORN_CLOTHES
-        WHERE type = 'BOTTOM'))
-    UNION ALL
-    (SELECT R.id, R.type, R.img_filename, R.wears
-        FROM REWORN_CLOTHES R
-        WHERE R.type = 'OUTERWEAR'
-        AND R.wears = (
-        SELECT MAX(wears)
-        FROM REWORN_CLOTHES
-        WHERE type = 'OUTERWEAR'))
-    UNION ALL
-    (SELECT R.id, R.type, R.img_filename, R.wears
-        FROM REWORN_CLOTHES R
-        WHERE R.type = 'DRESS'
-        AND R.wears = (
-        SELECT MAX(wears)
-        FROM REWORN_CLOTHES
-        WHERE type = 'DRESS'))	 
-    UNION ALL
-    (SELECT R.id, R.type, R.img_filename, R.wears
-        FROM REWORN_CLOTHES R
-        WHERE R.type = 'SHOES'
-        AND R.wears = (
-        SELECT MAX(wears)
-        FROM REWORN_CLOTHES
-        WHERE type = 'SHOES'))
+    
+    SELECT *
+      FROM (
     """
+    for cl_type in context["clothing_types"]:
+        query += f"""
+        (SELECT R.id, R.type, R.img_filename, R.wears
+            FROM REWORN_CLOTHES R
+            WHERE R.type = '{cl_type}'
+            AND R.wears = (
+            SELECT MAX(wears)
+            FROM REWORN_CLOTHES
+            WHERE type = '{cl_type}')
+            LIMIT 1)
+        """
+        if cl_type != context["clothing_types"][-1]:
+              query += "UNION ALL"
+
+    query += """
+    ) R
+    ORDER BY R.type
+    """
+
+    return query
 
 
 def ranking_query(context):
@@ -157,7 +153,7 @@ def ranking_query(context):
     """
     precip_where = " WHERE 1=0" if context["precip"] is None else " WHERE precip IS NOT NULL"
 
-    return f"""
+    query = f"""
     WITH 
     USER_CLOTHES AS (
         SELECT C.id, C.type, C.subtype, C.fit, C.occasion, C.img_filename,
@@ -166,7 +162,7 @@ def ranking_query(context):
           JOIN core_user U
             ON C.user_id = U.id
          WHERE U.username = %s
-           AND C.winter IS {"TRUE" if context["iswinter"] else "NOT TRUE"}
+           AND C.weather = '{context["weather"]}'
     ),
     WORN_CLOTHES AS (
         SELECT U.id, U.type, U.subtype, U.fit, U.occasion
@@ -268,84 +264,33 @@ def ranking_query(context):
         SELECT *, time_deduct * (subtype_weight + fit_weight + occasion_weight) + random() * 0.05 AS score
           FROM WEIGHTED_CLOTHES
     ),
-    RANKED_TOPS AS (
-        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM SCORED
-          WHERE type = 'TOP'
-       ORDER BY score DESC
-          LIMIT 5)
-            UNION
-        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
-          WHERE type = 'TOP'
-            AND precip = '{context["precip"]}' 
-          LIMIT 1)
-    ),
-    RANKED_BOTTOMS AS (
-        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM SCORED
-          WHERE type = 'BOTTOM'
-       ORDER BY score DESC
-          LIMIT 5)
-            UNION
-        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
-          WHERE type = 'BOTTOM'
-            AND precip = '{context["precip"]}' 
-          LIMIT 1)
-    ),
-    RANKED_OUTERWEAR AS (
-        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM SCORED
-          WHERE type = 'OUTERWEAR'
-       ORDER BY score DESC
-          LIMIT 5)
-            UNION
-        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
-          WHERE type = 'OUTERWEAR'
-            AND precip = '{context["precip"]}' 
-          LIMIT 1)
-    ),
-    RANKED_DRESSES AS (
-        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM SCORED
-          WHERE type = 'DRESS'
-       ORDER BY score DESC
-          LIMIT 5)
-            UNION
-        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
-          WHERE type = 'DRESS'
-            AND precip = '{context["precip"]}' 
-          LIMIT 1)
-    ),
-    RANKED_SHOES AS (
-        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM SCORED
-          WHERE type = 'SHOES'
-       ORDER BY score DESC
-          LIMIT 5)
-            UNION
-        (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-           FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
-          WHERE type = 'SHOES'
-            AND precip = '{context["precip"]}' 
-          LIMIT 1)
-    )
-
-       SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit
-         FROM RANKED_TOPS
-    UNION ALL
-       SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit
-         FROM RANKED_BOTTOMS
-    UNION ALL
-       SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit
-         FROM RANKED_OUTERWEAR
-    UNION ALL
-       SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit
-         FROM RANKED_DRESSES
-    UNION ALL
-       SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit
-        FROM RANKED_SHOES;
     """
+
+    for cl_type in context["clothing_types"]:
+      query += f"""
+          RANKED_{cl_type} AS (
+              (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+                FROM SCORED
+                WHERE type = '{cl_type}'
+            ORDER BY score DESC
+                LIMIT 5)
+                  UNION
+              (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
+                FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
+                WHERE type = '{cl_type}'
+                  AND precip = '{context["precip"]}' 
+                LIMIT 1)
+          )
+        """
+      if cl_type != context["clothing_types"][-1]:
+        query += ","
+
+    for cl_type in context["clothing_types"]:
+      query += f"""
+          SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit
+            FROM RANKED_{cl_type}          
+            """
+      if cl_type != context["clothing_types"][-1]:
+        query += "UNION ALL"
+
+    return query
