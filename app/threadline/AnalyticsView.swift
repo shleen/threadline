@@ -8,40 +8,71 @@
 import SwiftUI
 
 // Models for decoding the API response
+struct UtilizationItem: Codable {
+    let util_type: String
+    let percent: Double
+}
+
 struct UtilizationData: Codable {
-    let TOTAL: String?
-    let TOP: String?
-    let BOTTOM: String?
-    let OUTERWEAR: String?
-    let DRESS: String?
-    let SHOES: String?
-    
-    // Computed properties to convert strings to Doubles
-    var totalValue: Double { Double(TOTAL ?? "0") ?? 0 }
-    var topValue: Double { Double(TOP ?? "0") ?? 0 }
-    var bottomValue: Double { Double(BOTTOM ?? "0") ?? 0 }
-    var outerwearValue: Double { Double(OUTERWEAR ?? "0") ?? 0 }
-    var dressValue: Double { Double(DRESS ?? "0") ?? 0 }
-    var shoesValue: Double { Double(SHOES ?? "0") ?? 0 }
+    let TOTAL: Double
+    let utilization: [UtilizationItem]
 }
 
 struct RewornItem: Codable {
     let id: Int
+    let type: String
     let img_filename: String
     let wears: Int
 }
 
-struct RewearData: Codable {
-    let TOP: [RewornItem]?
-    let BOTTOM: [RewornItem]?
-    let OUTERWEAR: [RewornItem]?
-    let DRESS: [RewornItem]?
-    let SHOES: [RewornItem]?
+struct DeclutterItem: Codable {
+    let id: Int
+    let img_filename: String
+    let wears: Int
+    let last_wear: String
+}
+
+struct DeclutterData: Codable {
+    let declutter: [DeclutterItem]
 }
 
 struct UtilizationResponse: Codable {
     let utilization: UtilizationData
-    let rewears: RewearData
+    let rewears: [RewornItem]?
+//    let declutter: DeclutterData
+}
+
+struct DeclutterView: View {
+    @Binding var declutter: DeclutterData?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Least Worn Items")
+                    .font(.headline)
+                
+                Button(action: {}) {
+                    Text("Declutter All")
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Color.red)
+                .foregroundStyle(.white)
+                .clipShape(Capsule())
+                .padding(.leading, 80)
+            }
+            .padding(.top, 20)
+            
+            VStack(alignment: .leading, spacing: 12) {
+            }
+            .padding(.leading, 25)
+            .padding(.bottom, 15)
+            .padding(.top, 20)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
+        }
+    }
 }
 
 struct AnalyticsView: View {
@@ -49,10 +80,11 @@ struct AnalyticsView: View {
     @Environment(UrlStore.self) private var urlStore
     
     @State private var utilization: UtilizationData?
-    @State private var rewears: RewearData?
+    @State private var rewears: [RewornItem]?
     @State private var isLoading = false
     @State private var errorMessage: String?
-    
+    @State private var declutter: DeclutterData?
+//
     var body: some View {
         NavigationView {
             ZStack {
@@ -78,14 +110,14 @@ struct AnalyticsView: View {
                             if let rewears = rewears {
                                 rewornSection(rewears)
                             }
+                            
+                            // Declutter Recommendations Section
+//                            DeclutterView(declutter: $declutter)
                         }
                     }
                     .padding()
                 }
                 .navigationTitle(Text("Wardrobe Analytics"))
-                .refreshable {
-                    await fetchStats()
-                }
             }
         }
         .onAppear {
@@ -113,10 +145,10 @@ struct AnalyticsView: View {
                     .frame(width: 150, height: 150)
                     .padding(.vertical, 40)
                     .padding(.horizontal, 110)
-                Text("\(Int(utilization.totalValue * 100))%")
+                Text("\(Int(utilization.TOTAL * 100))%")
                     .font(.title)
                 Circle()
-                    .trim(from: 0, to: utilization.totalValue) // 1
+                    .trim(from: 0, to: utilization.TOTAL)
                     .stroke(
                         Color.green,
                         style: StrokeStyle(
@@ -140,18 +172,17 @@ struct AnalyticsView: View {
             Text("Monthly Utilization")
                 .font(.headline)
             
-            if isAllZeroOrNull(utilization) {
+            if utilization.utilization.isEmpty {
                 Text("No outfits logged this month")
                     .foregroundColor(.secondary)
                     .padding(.vertical, 8)
             }
             
             VStack(alignment: .leading, spacing: 12) {
-                utilizationRow("👕 Tops", utilization.topValue)
-                utilizationRow("🩳 Bottoms", utilization.bottomValue)
-                utilizationRow("🧥 Outerwear", utilization.outerwearValue)
-                utilizationRow("👗 Dresses", utilization.dressValue)
-                utilizationRow("👠 Shoes", utilization.shoesValue)
+                ForEach(utilization.utilization, id: \.util_type) { util in
+                    utilizationRow(util.util_type, util.percent)
+                }
+                            
             }
             .padding(.leading, 25)
             .padding(.bottom, 15)
@@ -162,32 +193,24 @@ struct AnalyticsView: View {
         }
     }
     
-    private func rewornSection(_ rewears: RewearData) -> some View {
+    private func rewornSection(_ rewears: [RewornItem]) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Most Worn Items")
                 .font(.headline)
                 .padding(.top, 8)
             
-            if isAllEmpty(rewears) {
+            if rewears.isEmpty {
                 Text("No items have been worn multiple times this month")
                     .foregroundColor(.secondary)
                     .padding(.vertical, 8)
+                    .padding(.horizontal)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y: 5)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
-                    if let topRewear = rewears.TOP?.first {
-                        rewornItemRow("Top", topRewear)
-                    }
-                    if let bottomRewear = rewears.BOTTOM?.first {
-                        rewornItemRow("Bottom", bottomRewear)
-                    }
-                    if let outerwearRewear = rewears.OUTERWEAR?.first {
-                        rewornItemRow("Outerwear", outerwearRewear)
-                    }
-                    if let dressRewear = rewears.DRESS?.first {
-                        rewornItemRow("Dress", dressRewear)
-                    }
-                    if let shoesRewear = rewears.SHOES?.first {
-                        rewornItemRow("Shoes", shoesRewear)
+                    ForEach(rewears, id: \.id) { rewear in
+                        rewornItemRow(rewear.type, rewear)
                     }
                 }
                 .padding(.horizontal)
@@ -201,7 +224,7 @@ struct AnalyticsView: View {
     
     private func utilizationRow(_ label: String, _ value: Double) -> some View {
         HStack {
-            Text(label)
+            Text(label.lowercased().capitalized)
             Spacer()
             // Create a progress bar with the percentage
             Text("\(Int(value * 100))%")
@@ -234,7 +257,7 @@ struct AnalyticsView: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(category)
+                Text(category.lowercased().capitalized)
                     .font(.subheadline)
                     .fontWeight(.medium)
                 Text("Worn \(item.wears) times this month")
@@ -275,29 +298,13 @@ struct AnalyticsView: View {
             
             self.utilization = result.utilization
             self.rewears = result.rewears
+//            self.declutter = result.declutter
             
         } catch {
-            errorMessage = "Failed to load stats: \(error.localizedDescription)"
+            errorMessage = "Failed to load stats: \(error)"
         }
         
         isLoading = false
-    }
-    
-    private func isAllZeroOrNull(_ utilization: UtilizationData) -> Bool {
-        return utilization.totalValue == 0 &&
-               utilization.topValue == 0 &&
-               utilization.bottomValue == 0 &&
-               utilization.outerwearValue == 0 &&
-               utilization.dressValue == 0 &&
-               utilization.shoesValue == 0
-    }
-    
-    private func isAllEmpty(_ rewears: RewearData) -> Bool {
-        return rewears.TOP == nil &&
-               rewears.BOTTOM == nil &&
-               rewears.OUTERWEAR == nil &&
-               rewears.DRESS == nil &&
-               rewears.SHOES == nil
     }
 }
 
