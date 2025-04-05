@@ -147,7 +147,7 @@ def get_closet(request):
         'layerable',
         'precip',
         'occasion',
-        'winter',
+        'weather',
         'created_at'
     ))
     # Add tags to each item

@@ -116,12 +116,13 @@ def compute_utilization(context):
     each type of clothing that has been worn within the past month
     """
     utilization = execute_read_query(utilization_query(), [context["username"]])
+    util_types = list(filter(lambda util: util["util_type"] != "TOTAL", utilization))
+
 
     return {
-        "TOTAL": [util["percent"] for util in utilization if util["util_type"] == "TOTAL"][0],
-        "utilization": list(filter(lambda util: util["util_type"] != "TOTAL", utilization))
+        "TOTAL": [float(util["percent"]) for util in utilization if util["util_type"] == "TOTAL"][0],
+        "utilization":  list(map(lambda ut: {"util_type": ut["util_type"], "percent": float(ut["percent"])}, util_types))
     }
-
 
 def compute_rewears(context):
     """
