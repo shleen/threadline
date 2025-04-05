@@ -280,3 +280,15 @@ def remove_background(request):
 @require_method('GET')
 def get_categories(_):
     return JsonResponse(pull_clothing_tags())
+
+@csrf_exempt
+@require_method('GET')
+def get_declutter(request):
+    username = request.GET.get('username')
+
+    if username is None:
+        return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
+
+    return JsonResponse({
+        "declutter": pull_declutter({"username": username})
+    })
