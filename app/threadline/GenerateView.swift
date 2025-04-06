@@ -21,53 +21,32 @@ struct GenerateView: View {
     @State private var isSwapViewPresented: Bool = false
     @State private var itemToSwap: ClothingItem?
     @State private var categoryToSwap: String?
+    @State private var isLoading: Bool = false
+    @State private var showError: Bool = false
     
     var body: some View {
         NavigationView {
             ZStack {
                 Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
-                VStack {
-                    if let selectedOutfit = selectedOutfit {
-                        let columns = Array(repeating: GridItem(.flexible()), count: selectedOutfit.clothes.count)
-                        
-                        LazyVGrid(columns: columns, spacing: 20) {
-                            ForEach(selectedOutfit.clothes) { item in
-                                VStack {
-                                    AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
-                                        if let image = phase.image {
-                                            image
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: 115, height: 115)
-                                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        } else {
-                                            Image("Example")
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: 115, height: 115)
-                                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                .foregroundColor(.gray)
-                                        }
-                                    }
-                                    Button(action: {
-                                        itemToSwap = item
-                                        categoryToSwap = getCategory(for: item)
-                                        isSwapViewPresented = true
-                                    }) {
-                                        Image(systemName: "arrow.swap")
-                                            .foregroundColor(.blue)
-                                            .padding(.bottom, 45)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    if !isOutfitConfirmed {
+
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                } else if showError {
+                    VStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 50))
+                            .foregroundColor(.red)
+                            .padding()
+                        Text("Outfit recommendations failed. Please try again later.")
+                            .multilineTextAlignment(.center)
+                            .padding()
                         Button(action: {
-                            nextOutfit()
+                            showError = false
+                            fetchOutfits()
                         }) {
-                            Text("Next Outfit")
+                            Text("Try Again")
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .padding()
@@ -76,75 +55,147 @@ struct GenerateView: View {
                                 .cornerRadius(10)
                                 .padding(.horizontal, 20)
                         }
-                        
-                        Button(action: {
-                            confirmOutfit()
-                        }) {
-                            Text("Confirm")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.green)
-                                .cornerRadius(10)
-                                .padding(.horizontal, 20)
-                        }
-                        .padding(.top, 10)
-                    } else {
-                        Text("Outfit Confirmed")
-                            .font(.headline)
-                            .foregroundColor(.green)
-                            .padding()
                     }
-                }
-                .padding(.bottom, 48)
-                .padding(.top, 50)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .padding(.horizontal, 15)
-                .padding(.bottom, 135)
-                .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
-                .onAppear {
-                    fetchOutfits()
-                }
-                .sheet(isPresented: $isSwapViewPresented) {
-                    if let category = categoryToSwap {
-                        SwapItemView(category: category, onItemSelected: { newItem in
-                            swapItem(newItem: newItem)
-                        })
+                } else {
+                    VStack {
+                        if let selectedOutfit = selectedOutfit {
+                            let columns = Array(repeating: GridItem(.flexible()), count: selectedOutfit.clothes.count)
+
+                            LazyVGrid(columns: columns, spacing: 20) {
+                                ForEach(selectedOutfit.clothes) { item in
+                                    VStack {
+                                        AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
+                                            if let image = phase.image {
+                                                image
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 115, height: 115)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            } else {
+                                                Image("Example")
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 115, height: 115)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                    .foregroundColor(.gray)
+                                            }
+                                        }
+                                        Button(action: {
+                                            itemToSwap = item
+                                            categoryToSwap = getCategory(for: item)
+                                            isSwapViewPresented = true
+                                        }) {
+                                            Image(systemName: "arrow.swap")
+                                                .foregroundColor(.blue)
+                                                .padding(.bottom, 45)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if !isOutfitConfirmed {
+                            Button(action: {
+                                nextOutfit()
+                            }) {
+                                Text("Next Outfit")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.blue)
+                                    .cornerRadius(10)
+                                    .padding(.horizontal, 20)
+                            }
+
+                            Button(action: {
+                                confirmOutfit()
+                            }) {
+                                Text("Confirm")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.green)
+                                    .cornerRadius(10)
+                                    .padding(.horizontal, 20)
+                            }
+                            .padding(.top, 10)
+                        } else {
+                            Text("Outfit Confirmed")
+                                .font(.headline)
+                                .foregroundColor(.green)
+                                .padding()
+                        }
+                    }
+                    .padding(.bottom, 48)
+                    .padding(.top, 50)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(.horizontal, 15)
+                    .padding(.bottom, 135)
+                    .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
+                    .sheet(isPresented: $isSwapViewPresented) {
+                        if let category = categoryToSwap {
+                            SwapItemView(category: category, onItemSelected: { newItem in
+                                swapItem(newItem: newItem)
+                            })
+                        }
                     }
                 }
                 Spacer()
             }
             .navigationTitle(Text("Your Recommendation"))
-            
+            .onAppear {
+                fetchOutfits()
+            }
         }
     }
     
     func fetchOutfits() {
+        isLoading = true
+        showError = false
+
         locationManager.requestLocation { location in
             let lat = location.coordinate.latitude
             let lon = location.coordinate.longitude
 
             guard let url = URL(string: "\(urlStore.serverUrl)/recommendation/get?username=\(username)&lat=\(lat)&lon=\(lon)") else {
                 print("Invalid URL")
+                DispatchQueue.main.async {
+                    isLoading = false
+                    showError = true
+                }
                 return
             }
 
             URLSession.shared.dataTask(with: url) { data, response, error in
-                if let data = data {
-                    do {
-                        let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
-                        if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
-                            DispatchQueue.main.async {
+                DispatchQueue.main.async {
+                    isLoading = false
+
+                    if let error = error {
+                        print("Error fetching outfits: \(error)")
+                        showError = true
+                        return
+                    }
+
+                    if let data = data {
+                        do {
+                            let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
+                            if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
                                 self.outfits = fetchedOutfits
                                 self.selectedOutfit = fetchedOutfits.first
                                 self.currentIndex = 0
-                                printOutfits(outfits: fetchedOutfits) // Print the contents of the outfits array
+                                printOutfits(outfits: fetchedOutfits)
+                            } else {
+                                showError = true
                             }
+                        } catch {
+                            print("Error decoding JSON: \(error)")
+                            showError = true
                         }
-                    } catch {
-                        print("Error decoding JSON: \(error)")
+                    } else {
+                        showError = true
                     }
                 }
             }.resume()
