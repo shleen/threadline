@@ -227,3 +227,10 @@ def get_weather(lat, lon):
         return result
     else:
         raise Exception("failed to fetch weather data")
+
+
+def pull_declutter(context):
+    """
+    Pulls recommended items to declutter
+    """
+    return execute_read_query(declutter_query(), [context["username"]])

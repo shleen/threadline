@@ -17,19 +17,6 @@ def execute_read_query(sql, params):
     
     return records
 
-def occasion_query():
-    """
-    Returns the subtypes of clothing a user has in their wardrobe
-    """
-    return """
-      SELECT DISTINCT C.occasion
-        FROM core_clothing C
-        JOIN core_user U
-          ON C.user_id = U.id
-       WHERE U.username = %s
-    """
-
-
 def prev_outfit_query():
     """
     Returns the query to fetch up to 15 previously worn outfits
@@ -294,3 +281,45 @@ def ranking_query(context):
         query += "UNION ALL"
 
     return query
+
+def declutter_query():
+    """
+    Returns the query to perform declutter recommending. Pulls 
+    the least worn items, worn over a month ago from today or not at all
+    """
+    return """
+      WITH 
+      USER_CLOTHES AS (
+        SELECT C.id, C.img_filename
+          FROM core_clothing C
+          JOIN core_user U
+            ON C.user_id = U.id
+         WHERE U.username = %s
+      ),
+      WORN_CLOTHES AS (
+        SELECT U.id, O.date_worn
+          FROM USER_ClOTHES U
+          JOIN core_outfititem I
+            ON U.id = I.clothing_id
+          JOIN core_outfit O
+            ON I.outfit_id = O.id
+      ),
+      WEAR_COUNTS AS (
+            SELECT W.id, COUNT(*) AS wears, MAX(W.date_worn) AS recent
+              FROM WORN_CLOTHES W
+          GROUP BY W.id
+      )
+        SELECT U.id, U.img_filename, W.recent,
+          CASE
+              WHEN W.wears IS NULL THEN 0
+              ELSE W.wears
+           END AS wear_counts
+          FROM USER_CLOTHES U
+     LEFT JOIN WEAR_COUNTS W
+            ON U.id = W.id
+         WHERE W.recent IS NULL
+            OR W.recent < date_trunc('day', NOW() - interval '1 month')
+      ORDER BY wear_counts
+         LIMIT 3
+    """
+
