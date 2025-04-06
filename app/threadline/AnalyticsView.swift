@@ -25,55 +25,11 @@ struct RewornItem: Codable {
     let wears: Int
 }
 
-struct DeclutterItem: Codable {
-    let id: Int
-    let img_filename: String
-    let wears: Int
-    let last_wear: String
-}
-
-struct DeclutterData: Codable {
-    let declutter: [DeclutterItem]
-}
-
 struct UtilizationResponse: Codable {
     let utilization: UtilizationData
     let rewears: [RewornItem]?
-//    let declutter: DeclutterData
 }
 
-struct DeclutterView: View {
-    @Binding var declutter: DeclutterData?
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Least Worn Items")
-                    .font(.headline)
-                
-                Button(action: {}) {
-                    Text("Declutter All")
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Color.red)
-                .foregroundStyle(.white)
-                .clipShape(Capsule())
-                .padding(.leading, 80)
-            }
-            .padding(.top, 20)
-            
-            VStack(alignment: .leading, spacing: 12) {
-            }
-            .padding(.leading, 25)
-            .padding(.bottom, 15)
-            .padding(.top, 20)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
-        }
-    }
-}
 
 struct AnalyticsView: View {
     @AppStorage("username") private var username: String = ""
@@ -83,8 +39,7 @@ struct AnalyticsView: View {
     @State private var rewears: [RewornItem]?
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var declutter: DeclutterData?
-//
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -110,9 +65,6 @@ struct AnalyticsView: View {
                             if let rewears = rewears {
                                 rewornSection(rewears)
                             }
-                            
-                            // Declutter Recommendations Section
-//                            DeclutterView(declutter: $declutter)
                         }
                     }
                     .padding()
@@ -298,7 +250,6 @@ struct AnalyticsView: View {
             
             self.utilization = result.utilization
             self.rewears = result.rewears
-//            self.declutter = result.declutter
             
         } catch {
             errorMessage = "Failed to load stats: \(error)"

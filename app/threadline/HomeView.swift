@@ -46,7 +46,12 @@ struct HomeView: View {
                         Text("Statistics")
                     }
                     .tag(3)
-
+                DeclutterView()
+                    .tabItem {
+                        Image(systemName: "trash")
+                        Text("Declutter")
+                    }
+                    .tag(4)
             }
             
             // Shadow effect at the top of the navbar
