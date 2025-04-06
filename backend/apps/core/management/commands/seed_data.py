@@ -64,6 +64,11 @@ class Command(BaseCommand):
         ]
         precips = [None, Clothing.Precip.RAIN, Clothing.Precip.SNOW]
 
+        weathers = [
+            Clothing.Weather.SUMMER,
+            Clothing.Weather.WINTER
+        ]
+
         for user in [user1, user2]:
             for i in range(100):
                 ctype, subtype = random.choice(clothing_types)
@@ -73,7 +78,7 @@ class Command(BaseCommand):
                 fit = random.choice(fits)
                 occasion = random.choice(occasions)
                 precipitation = random.choice(precips)
-                winter = bool(random.getrandbits(1))
+                weather = random.choice(weathers)
                 layerable = bool(random.getrandbits(1))
 
                 # upload a random local image to r2
@@ -94,7 +99,7 @@ class Command(BaseCommand):
                     layerable=layerable,
                     precip=precipitation,
                     occasion=occasion,
-                    winter=winter,
+                    weather=weather,
                     user=user
                 )
 

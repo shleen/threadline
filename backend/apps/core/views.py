@@ -199,30 +199,25 @@ def log_outfit(request):
 @csrf_exempt
 @require_method('GET')
 def get_recommendations(request):
+    # Validate URL Params
     username = request.GET.get('username')
+    lat = request.GET.get('lat')
+    lon = request.GET.get('lon')
 
     if username is None:
         return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
 
-    # Weather Filtering API Call Here
-    lat = request.GET.get('lat')
-    lon = request.GET.get('lon')
+    if not (lat and lon):
+        return HttpResponseBadRequest("No latitude or longitude provided")
 
-    # Use defaults for is_winter and precip
-    is_winter = False
-    precip = None
+    # Get weather at location
+    conditions = get_weather(float(lat), float(lon))
 
-    if lat and lon:
-        # Get weather at location
-        weather = get_weather(float(lat), float(lon))
-
-        is_winter = weather["temp"] < 45
-        precip = weather["precip"]
-    else:
-        # TODO: decide how to handle this. FE error?
-        pass
-
-    context = { "username": username, "iswinter": is_winter, "precip": precip }
+    context = {
+        "username": username,
+        "weather": conditions["weather"],
+        "precip": conditions["precip"]
+    }
     clothes = filter_and_rank(context)
     matched = item_match(clothes)
 
@@ -329,3 +324,8 @@ def process_image(request):
         "colors": json_data,
         "image_base64": f"{encoded_string}"
     })
+
+@csrf_exempt
+@require_method('GET')
+def get_categories(_):
+    return JsonResponse(pull_clothing_tags())

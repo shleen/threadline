@@ -27,4 +27,5 @@ urlpatterns = [
     path('utilization/get', views.get_utilization),
     path('background/remove', views.remove_background),
     path('image/process', views.process_image)
+    path('categories/get', views.get_categories)
 ]

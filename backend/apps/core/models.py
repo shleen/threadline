@@ -62,6 +62,9 @@ class Clothing(models.Model):
         FITTED = "FITTED"
         TIGHT = "TIGHT"
 
+    class Weather(models.TextChoices):
+        WINTER = "WINTER"
+        SUMMER = "SUMMER"
 
     def validate_subtype(value):
         # if no subtype is provided, skip validation (assuming field is optional)
@@ -110,7 +113,7 @@ class Clothing(models.Model):
 
     occasion = models.CharField(choices=Occasion)
 
-    winter = models.BooleanField()
+    weather = models.CharField(choices=Weather, default=Weather.SUMMER)
 
     created_at = models.DateTimeField(default=timezone.now)
 
@@ -140,3 +143,23 @@ class OutfitItem(models.Model):
 def clothing_post_delete(sender, instance, **kwargs):
         # Also delete relevant image from r2 to prevent orphaned data
         r2.delete_object(Bucket=IMAGE_BUCKET, Key=instance.img_filename)
+
+### If introducing a new clothing type, add its subtypes to the mapping
+TAG_MAPPINGS = {
+    Clothing.ClothingType.TOP: Clothing.TopSubtype,
+    Clothing.ClothingType.BOTTOM: Clothing.BottomSubtype,
+    Clothing.ClothingType.DRESS: Clothing.DressSubtype,
+    Clothing.ClothingType.OUTERWEAR: Clothing.OuterwearSubtype,
+    Clothing.ClothingType.SHOES: Clothing.ShoesSubtype
+}
+
+### Extending any of the following categories will automatically be reflected here
+BASE_TYPES = Clothing.ClothingType._member_names_
+BASE_OCCASIONS = Clothing.Occasion._member_names_
+BASE_FIT = Clothing.ClothingFit._member_names_
+BASE_PRECIP = Clothing.Precip._member_names_
+BASE_SUBTYPE = [
+    {"type": typ, "subtypes": subtype._member_names_} 
+    for typ, subtype in TAG_MAPPINGS.items()
+]
+BASE_WEATHER = Clothing.Weather._member_names_

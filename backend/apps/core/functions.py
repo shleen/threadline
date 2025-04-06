@@ -2,11 +2,12 @@ from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import UploadedFile
 
-from .models import User
+from .models import *
 from .queries import *
 from PIL import Image
 from rembg import remove
 from colorthief import ColorThief
+from itertools import groupby
 import os
 import requests
 import tempfile
@@ -26,6 +27,19 @@ def get_or_create_user(username):
 
     return user
 
+def pull_clothing_tags():
+    """
+    Returns all categories for tags on the fronted
+    """
+    return {
+        "type": BASE_TYPES,
+        "occasion": BASE_OCCASIONS,
+        "fit": BASE_FIT,
+        "precip": BASE_PRECIP,
+        "subtype": BASE_SUBTYPE,
+        "weather": BASE_WEATHER
+    }
+
 
 def filter_and_rank(context):
     """
@@ -34,10 +48,11 @@ def filter_and_rank(context):
     garment. Context includes the username and parameters computed for
     weather filtering from the API call.
     """
+    context["clothing_types"] = BASE_TYPES
     records = execute_read_query(ranking_query(context), [context["username"]])
 
     # Group garments into queues based on their type
-    ranked_queues = {k: [] for k in ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]}
+    ranked_queues = {k: [] for k in BASE_TYPES}
     for rec in records:
         ranked_queues[rec["type"]].append(rec)
 
@@ -53,20 +68,19 @@ def item_match(ranked):
         return []
 
     outfits = []
-    while len(ranked["TOP"]) > 0 and len(ranked["BOTTOM"]) > 0 and len(ranked["SHOES"]) > 0:
-        outfit = {k: None for k in ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]}
+    while (len(ranked[Clothing.ClothingType.TOP]) > 0 and
+           len(ranked[Clothing.ClothingType.BOTTOM]) > 0 and
+           len(ranked[Clothing.ClothingType.SHOES]) > 0):
 
+        clothes = []
         for k, queue in ranked.items():
-            if k == "DRESS" or k == "OUTERWEAR":
+            if k == Clothing.ClothingType.DRESS or k == Clothing.ClothingType.OUTERWEAR:
                 continue
+
             garment = queue.pop()
+            clothes.append({"id": garment["id"], "img": garment["img_filename"]})
 
-            if outfit[k] is None:
-                outfit[k] = [{"id": garment["id"], "img": garment["img_filename"]}]
-            else:
-                outfit[k].append({"id": garment["id"], "img": garment["img_filename"]})
-
-        outfits.append(outfit)
+        outfits.append({"clothes": clothes})
 
     return outfits
 
@@ -79,24 +93,21 @@ def pull_past_outfits(context):
     records = execute_read_query(prev_outfit_query(), [context["username"]])
 
     # Flatten records into outfits
-    outfit_dict = {}
-    for rec in records:
-        outfit_id = rec["outfit_id"]
-        outfit = outfit_dict.get(outfit_id,
-            {k: None for k in ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]})
-
-        outfit["outfit_id"] = outfit_id
-        outfit["timestamp"] = rec["date_worn"]
-
-        garment = {"clothing_id": rec["clothing_id"], "img": rec["img_filename"]}
-        if outfit[rec["type"]] is None:
-            outfit[rec["type"]] = [garment]
-        else:
-            outfit[rec["type"]].append(garment)
-
-        outfit_dict[outfit_id] = outfit
-
-    return sorted(list(outfit_dict.values()), key=lambda outfit: outfit["timestamp"], reverse=True)[:15]
+    return sorted([
+        {
+            "outfit_id": outfit_id,
+            "timestamp": timestamp,
+            "clothes": [
+                {
+                    "clothing_id": cloth["clothing_id"],
+                    "img": cloth["img_filename"]
+                }
+                for cloth in group
+            ]
+        }
+        for (outfit_id, timestamp),  group in groupby(
+            records, lambda cloth: (cloth["outfit_id"], cloth["date_worn"]))
+    ], key=lambda outfit: outfit["timestamp"], reverse=True)
 
 
 
@@ -107,13 +118,10 @@ def compute_utilization(context):
     """
     utilization = execute_read_query(utilization_query(), [context["username"]])
 
-    util_dict = {k: None for k in ["TOTAL", "TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]}
-
-    # Map returned percentages to utilization dictionary
-    for util in utilization:
-        util_dict[util["util_type"]] = util["percent"]
-
-    return util_dict
+    return {
+        "TOTAL": [util["percent"] for util in utilization if util["util_type"] == "TOTAL"][0],
+        "utilization": list(filter(lambda util: util["util_type"] != "TOTAL", utilization))
+    }
 
 
 def compute_rewears(context):
@@ -121,21 +129,9 @@ def compute_rewears(context):
     Pull which items of clothing were reworn (i.e., worn more than once)
     the most in the last month
     """
-    rewears = execute_read_query(rewears_query(), [context["username"]])
+    context["clothing_types"] = BASE_TYPES
+    return execute_read_query(rewears_query(context), [context["username"]])
 
-    # For each type that has rewears, build a list of clothing item JSONs
-    rewear_dict = {k: None for k in ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]}
-    for rewear in rewears:
-        key = rewear["type"]
-        rewear.pop("type")
-
-        if rewear_dict[key] is None:
-           rewear_dict[key] = [rewear]
-           continue
-
-        rewear_dict[key].append(rewear)
-
-    return rewear_dict
 
 def compress_image(img_path, quality=70):
     img = Image.open(img_path)
@@ -213,12 +209,21 @@ def get_weather(lat, lon):
         # See https://openweathermap.org/weather-conditions to make sense of the values below
         weather_id = data["weather"][0]["id"]
         if 200 <= weather_id <= 599:
-            precip = "RAIN"
+            precip = Clothing.Precip.RAIN
         elif 600 <= weather_id <= 699:
-            precip = "SNOW"
+            precip = Clothing.Precip.SNOW
+
+
+        # If More seasons/conditions added, add more match arms
+        weather = None
+        match temp:
+            case temp if temp < 45:
+                weather = Clothing.Weather.WINTER
+            case _:
+                weather = Clothing.Weather.SUMMER
 
         result = {
-            "temp": temp,
+            "weather": weather,
             "precip": precip,
             "location": f"{lat}, {lon}",
         }
