@@ -34,12 +34,8 @@ struct ClothingItem: Codable, Identifiable, Equatable {
     }
 }
 
-struct Outfit: Codable {
-    var TOP: [ClothingItem]?
-    var BOTTOM: [ClothingItem]?
-    var OUTERWEAR: [ClothingItem]?
-    var DRESS: [ClothingItem]?
-    var SHOES: [ClothingItem]?
+struct Outfit: Codable, Equatable {
+    var clothes: [ClothingItem]
 }
 
 struct ClosetResponse: Codable {

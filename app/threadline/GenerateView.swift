@@ -28,11 +28,10 @@ struct GenerateView: View {
                 Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
                 VStack {
                     if let selectedOutfit = selectedOutfit {
-                        let items = getAllItems(from: selectedOutfit)
-                        let columns = getColumns(for: items.count)
+                        let columns = Array(repeating: GridItem(.flexible()), count: selectedOutfit.clothes.count)
                         
                         LazyVGrid(columns: columns, spacing: 20) {
-                            ForEach(items) { item in
+                            ForEach(selectedOutfit.clothes) { item in
                                 VStack {
                                     AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
                                         if let image = phase.image {
@@ -131,7 +130,6 @@ struct GenerateView: View {
                 print("Invalid URL")
                 return
             }
-            print("here")
 
             URLSession.shared.dataTask(with: url) { data, response, error in
                 if let data = data {
@@ -140,7 +138,6 @@ struct GenerateView: View {
                         if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
                             DispatchQueue.main.async {
                                 self.outfits = fetchedOutfits
-                                print("hello")
                                 self.selectedOutfit = fetchedOutfits.first
                                 self.currentIndex = 0
                                 printOutfits(outfits: fetchedOutfits) // Print the contents of the outfits array
@@ -157,21 +154,7 @@ struct GenerateView: View {
     func printOutfits(outfits: [Outfit]) {
         for (index, outfit) in outfits.enumerated() {
             print("Outfit \(index + 1):")
-            if let tops = outfit.TOP {
-                print("  TOP: \(tops.map { $0.img })")
-            }
-            if let bottoms = outfit.BOTTOM {
-                print("  BOTTOM: \(bottoms.map { $0.img })")
-            }
-            if let outerwears = outfit.OUTERWEAR {
-                print("  OUTERWEAR: \(outerwears.map { $0.img })")
-            }
-            if let dresses = outfit.DRESS {
-                print("  DRESS: \(dresses.map { $0.img })")
-            }
-            if let shoes = outfit.SHOES {
-                print("  SHOES: \(shoes.map { $0.img })")
-            }
+            print("  \(outfit.clothes.map { $0.img })")
         }
     }
 
@@ -182,25 +165,12 @@ struct GenerateView: View {
     }
 
     func confirmOutfit() {
-        isOutfitConfirmed = true
         if let selectedOutfit = selectedOutfit {
             print("Outfit:")
-            if let tops = selectedOutfit.TOP {
-                print("  TOP: \(tops.map { $0.img })")
-            }
-            if let bottoms = selectedOutfit.BOTTOM {
-                print("  BOTTOM: \(bottoms.map { $0.img })")
-            }
-            if let outerwears = selectedOutfit.OUTERWEAR {
-                print("  OUTERWEAR: \(outerwears.map { $0.img })")
-            }
-            if let dresses = selectedOutfit.DRESS {
-                print("  DRESS: \(dresses.map { $0.img })")
-            }
-            if let shoes = selectedOutfit.SHOES {
-                print("  SHOES: \(shoes.map { $0.img })")
-            }
+            print(selectedOutfit)
             
+            isOutfitConfirmed = true
+
             // Send confirmed outfit to the server
             sendConfirmedOutfit(outfit: selectedOutfit)
         }
@@ -212,16 +182,9 @@ struct GenerateView: View {
             return
         }
         
-        var clothingIds: [Int] = []
-        if let tops = outfit.TOP { clothingIds.append(contentsOf: tops.map { $0.id }) }
-        if let bottoms = outfit.BOTTOM { clothingIds.append(contentsOf: bottoms.map { $0.id }) }
-        if let outerwears = outfit.OUTERWEAR { clothingIds.append(contentsOf: outerwears.map { $0.id }) }
-        if let dresses = outfit.DRESS { clothingIds.append(contentsOf: dresses.map { $0.id }) }
-        if let shoes = outfit.SHOES { clothingIds.append(contentsOf: shoes.map { $0.id }) }
-        
         let payload: [String: Any] = [
             "username": username,
-            "clothing_ids": clothingIds
+            "clothing_ids": outfit.clothes.map { $0.id }
         ]
         
         var request = URLRequest(url: url)
@@ -248,78 +211,21 @@ struct GenerateView: View {
         }.resume()
     }
     
-    func getAllItems(from outfit: Outfit) -> [ClothingItem] {
-        var items: [ClothingItem] = []
-        if let tops = outfit.TOP { items.append(contentsOf: tops) }
-        if let bottoms = outfit.BOTTOM { items.append(contentsOf: bottoms) }
-        if let outerwears = outfit.OUTERWEAR { items.append(contentsOf: outerwears) }
-        if let dresses = outfit.DRESS { items.append(contentsOf: dresses) }
-        if let shoes = outfit.SHOES { items.append(contentsOf: shoes) }
-        return items
-    }
-    
-    func getColumns(for itemCount: Int) -> [GridItem] {
-        switch itemCount {
-        case 2:
-            return [GridItem(.flexible()), GridItem(.flexible())]
-        case 3:
-            return [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-        case 4:
-            return [GridItem(.flexible()), GridItem(.flexible())]
-        case 5:
-            return [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-        case 6:
-            return [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-        default:
-            return [GridItem(.flexible())]
-        }
-    }
-    
     func getCategory(for item: ClothingItem) -> String? {
-        if selectedOutfit?.TOP?.contains(where: { $0.id == item.id }) == true {
-            return "TOP"
-        } else if selectedOutfit?.BOTTOM?.contains(where: { $0.id == item.id }) == true {
-            return "BOTTOM"
-        } else if selectedOutfit?.OUTERWEAR?.contains(where: { $0.id == item.id }) == true {
-            return "OUTERWEAR"
-        } else if selectedOutfit?.DRESS?.contains(where: { $0.id == item.id }) == true {
-            return "DRESS"
-        } else if selectedOutfit?.SHOES?.contains(where: { $0.id == item.id }) == true {
-            return "SHOES"
-        }
-        return nil
+        // TODO: backend needs to return category
+        return "TOP"
     }
     
     func swapItem(newItem: ClothingItem) {
-        guard let category = categoryToSwap else { return }
-        guard var outfit = selectedOutfit else { return }
-        
-        switch category {
-        case "TOP":
-            if let index = outfit.TOP?.firstIndex(where: { $0.id == itemToSwap?.id }) {
-                outfit.TOP?[index] = newItem
+        // Find selectedOutfit in outfits
+        if let outfit_index = outfits.firstIndex(where: { $0 == selectedOutfit }) {
+            // Replace itemToSwap with newItem in outfits[index]
+            if let item_index = outfits[outfit_index].clothes.firstIndex(where: { $0.id == itemToSwap?.id }) {
+                outfits[outfit_index].clothes[item_index] = newItem
             }
-        case "BOTTOM":
-            if let index = outfit.BOTTOM?.firstIndex(where: { $0.id == itemToSwap?.id }) {
-                outfit.BOTTOM?[index] = newItem
-            }
-        case "OUTERWEAR":
-            if let index = outfit.OUTERWEAR?.firstIndex(where: { $0.id == itemToSwap?.id }) {
-                outfit.OUTERWEAR?[index] = newItem
-            }
-        case "DRESS":
-            if let index = outfit.DRESS?.firstIndex(where: { $0.id == itemToSwap?.id }) {
-                outfit.DRESS?[index] = newItem
-            }
-        case "SHOES":
-            if let index = outfit.SHOES?.firstIndex(where: { $0.id == itemToSwap?.id }) {
-                outfit.SHOES?[index] = newItem
-            }
-        default:
-            break
+
+            // Update selectedOutfit
+            selectedOutfit = outfits[outfit_index]
         }
-        
-        outfits[currentIndex] = outfit
-        selectedOutfit = outfit
     }
 }
