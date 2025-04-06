@@ -292,3 +292,17 @@ def get_declutter(request):
     return JsonResponse({
         "declutter": pull_declutter({"username": username})
     })
+
+@csrf_exempt
+@require_method('POST')
+def post_declutter(request):
+    ## Validate and extract request fields
+    fields = json.loads(request.body.decode('utf-8'))
+    try:
+        ids = fields["ids"]
+        print(ids)
+
+        # Todo: Implement soft delete given the list of ids
+        return HttpResponse(status=200)
+    except:
+        return HttpResponseBadRequest(f"Required field 'ids' not provided. Please try again.\n")
