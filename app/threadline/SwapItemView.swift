@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SwapItemView: View {
-    let category: String
+    @Binding var category: String?
     let onItemSelected: (ClothingItem) -> Void
     
     @AppStorage("username") private var username: String = ""
@@ -19,51 +19,60 @@ struct SwapItemView: View {
     @State private var items: [ClothingItem] = []
     
     var body: some View {
-        VStack {
-            Text("Select a new \(category)")
-                .font(.headline)
-                .padding()
-            
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
-                    ForEach(items) { item in
-                        Button(action: {
-                            onItemSelected(item)
-                            presentationMode.wrappedValue.dismiss()
-                        }) {
-                            AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
-                                if let image = phase.image {
-                                    image
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 100, height: 100)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                } else {
-                                    Image("Sweats")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 100, height: 100)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .foregroundColor(.gray)
+        if let unwrappedCategory = category, !unwrappedCategory.isEmpty {
+            VStack {
+                Text("Select a new \(unwrappedCategory)")
+                    .font(.headline)
+                    .padding()
+
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
+                        ForEach(items) { item in
+                            Button(action: {
+                                onItemSelected(item)
+                                presentationMode.wrappedValue.dismiss()
+                            }) {
+                                AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
+                                    if let image = phase.image {
+                                        image
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 100, height: 100)
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    } else {
+                                        Color.red
+                                    }
                                 }
                             }
                         }
                     }
+                    .padding()
+                }
+            }
+            .onAppear {
+                fetchItems()
+            }
+        } else {
+            VStack {
+                Text("Something went wrong")
+                    .font(.headline)
+                    .foregroundColor(.red)
+                    .padding()
+
+                Button("Dismiss") {
+                    presentationMode.wrappedValue.dismiss()
                 }
                 .padding()
             }
         }
-        .onAppear {
-            fetchItems()
-        }
     }
     
     func fetchItems() {
-        guard let url = URL(string: "\(urlStore.serverUrl)/closet/get?username=\(username)&type=\(category)") else {
+        guard let url = URL(string: "\(urlStore.serverUrl)/closet/get?username=\(username)&type=\(category!)") else {
             print("Invalid URL")
             return
         }
-        print(url)
+
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let data = data {
                 do {

@@ -15,7 +15,6 @@ struct GenerateView: View {
     @ObservedObject private var locationManager = LocationManager.shared
 
     @State private var outfits: [Outfit] = []
-    @State private var selectedOutfit: Outfit?
     @State private var currentIndex: Int = 0
     @State private var isOutfitConfirmed: Bool = false
     @State private var isSwapViewPresented: Bool = false
@@ -33,62 +32,35 @@ struct GenerateView: View {
                     ProgressView()
                         .scaleEffect(1.5)
                         .progressViewStyle(CircularProgressViewStyle(tint: .blue))
-                } else if showError {
-                    VStack {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 50))
-                            .foregroundColor(.red)
-                            .padding()
-                        Text("Outfit recommendations failed. Please try again later.")
-                            .multilineTextAlignment(.center)
-                            .padding()
-                        Button(action: {
-                            showError = false
-                            fetchOutfits()
-                        }) {
-                            Text("Try Again")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.blue)
-                                .cornerRadius(10)
-                                .padding(.horizontal, 20)
-                        }
-                    }
+                } else if showError || outfits.isEmpty {
+                    ErrorView(showError: $showError, fetchOutfits: fetchOutfits)
                 } else {
                     VStack {
-                        if let selectedOutfit = selectedOutfit {
-                            let columns = Array(repeating: GridItem(.flexible()), count: selectedOutfit.clothes.count)
+                        let selectedOutfit = outfits[currentIndex]
+                        let columns = Array(repeating: GridItem(.flexible()), count: selectedOutfit.clothes.count)
 
-                            LazyVGrid(columns: columns, spacing: 20) {
-                                ForEach(selectedOutfit.clothes) { item in
-                                    VStack {
-                                        AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
-                                            if let image = phase.image {
-                                                image
-                                                    .resizable()
-                                                    .scaledToFit()
-                                                    .frame(width: 115, height: 115)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                            } else {
-                                                Image("Example")
-                                                    .resizable()
-                                                    .scaledToFit()
-                                                    .frame(width: 115, height: 115)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                    .foregroundColor(.gray)
-                                            }
+                        LazyVGrid(columns: columns, spacing: 20) {
+                            ForEach(selectedOutfit.clothes) { item in
+                                VStack {
+                                    AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
+                                        if let image = phase.image {
+                                            image
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 115, height: 115)
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        } else {
+                                            Color.gray
                                         }
-                                        Button(action: {
-                                            itemToSwap = item
-                                            categoryToSwap = getCategory(for: item)
-                                            isSwapViewPresented = true
-                                        }) {
-                                            Image(systemName: "arrow.swap")
-                                                .foregroundColor(.blue)
-                                                .padding(.bottom, 45)
-                                        }
+                                    }
+                                    Button(action: {
+                                        itemToSwap = item
+                                        categoryToSwap = item.type
+                                        isSwapViewPresented = true
+                                    }) {
+                                        Image(systemName: "arrow.swap")
+                                            .foregroundColor(.blue)
+                                            .padding(.bottom, 45)
                                     }
                                 }
                             }
@@ -135,17 +107,15 @@ struct GenerateView: View {
                     .padding(.horizontal, 15)
                     .padding(.bottom, 135)
                     .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
-                    .sheet(isPresented: $isSwapViewPresented) {
-                        if let category = categoryToSwap {
-                            SwapItemView(category: category, onItemSelected: { newItem in
-                                swapItem(newItem: newItem)
-                            })
-                        }
-                    }
                 }
                 Spacer()
             }
             .navigationTitle(Text("Your Recommendation"))
+            .sheet(isPresented: $isSwapViewPresented) {
+                SwapItemView(category: $categoryToSwap, onItemSelected: { newItem in
+                    swapItem(newItem: newItem)
+                })
+            }
             .onAppear {
                 fetchOutfits()
             }
@@ -171,8 +141,6 @@ struct GenerateView: View {
 
             URLSession.shared.dataTask(with: url) { data, response, error in
                 DispatchQueue.main.async {
-                    isLoading = false
-
                     if let error = error {
                         print("Error fetching outfits: \(error)")
                         showError = true
@@ -184,9 +152,10 @@ struct GenerateView: View {
                             let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
                             if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
                                 self.outfits = fetchedOutfits
-                                self.selectedOutfit = fetchedOutfits.first
                                 self.currentIndex = 0
                                 printOutfits(outfits: fetchedOutfits)
+
+                                isLoading = false
                             } else {
                                 showError = true
                             }
@@ -212,43 +181,38 @@ struct GenerateView: View {
     func nextOutfit() {
         guard !outfits.isEmpty else { return }
         currentIndex = (currentIndex + 1) % outfits.count
-        selectedOutfit = outfits[currentIndex]
     }
 
     func confirmOutfit() {
-        if let selectedOutfit = selectedOutfit {
-            print("Outfit:")
-            print(selectedOutfit)
-            
-            isOutfitConfirmed = true
+        let selectedOutfit = outfits[currentIndex]
 
-            // Send confirmed outfit to the server
-            sendConfirmedOutfit(outfit: selectedOutfit)
-        }
-    }
-    
-    func sendConfirmedOutfit(outfit: Outfit) {
+        print("Outfit:")
+        print(selectedOutfit)
+
         guard let url = URL(string: "\(urlStore.serverUrl)/outfit/post") else {
             print("Invalid URL")
             return
         }
-        
+
         let payload: [String: Any] = [
             "username": username,
-            "clothing_ids": outfit.clothes.map { $0.id }
+            "clothing_ids": selectedOutfit.clothes.map { $0.id }
         ]
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
         } catch {
             print("Error serializing JSON: \(error)")
             return
         }
-        
+
+        isOutfitConfirmed = true
+
+        // Send confirmed outfit to the server
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 print("Error sending confirmed outfit: \(error)")
@@ -262,21 +226,40 @@ struct GenerateView: View {
         }.resume()
     }
     
-    func getCategory(for item: ClothingItem) -> String? {
-        // TODO: backend needs to return category
-        return "TOP"
-    }
-    
     func swapItem(newItem: ClothingItem) {
-        // Find selectedOutfit in outfits
-        if let outfit_index = outfits.firstIndex(where: { $0 == selectedOutfit }) {
-            // Replace itemToSwap with newItem in outfits[index]
-            if let item_index = outfits[outfit_index].clothes.firstIndex(where: { $0.id == itemToSwap?.id }) {
-                outfits[outfit_index].clothes[item_index] = newItem
-            }
+        // Replace itemToSwap with newItem in outfits[currentIndex]
+        if let item_index = outfits[currentIndex].clothes.firstIndex(where: { $0.id == itemToSwap?.id }) {
+            outfits[currentIndex].clothes[item_index] = newItem
+        }
+    }
+}
 
-            // Update selectedOutfit
-            selectedOutfit = outfits[outfit_index]
+struct ErrorView: View {
+    @Binding var showError: Bool
+    @State var fetchOutfits: () -> Void
+
+    var body: some View {
+        VStack {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 50))
+                .foregroundColor(.red)
+                .padding()
+            Text("Outfit recommendations failed. Please try again later.")
+                .multilineTextAlignment(.center)
+                .padding()
+            Button(action: {
+                showError = false
+                fetchOutfits()
+            }) {
+                Text("Try Again")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue)
+                    .cornerRadius(10)
+                    .padding(.horizontal, 20)
+            }
         }
     }
 }
