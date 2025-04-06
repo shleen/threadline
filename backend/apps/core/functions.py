@@ -4,6 +4,8 @@ from django.core.files.uploadedfile import UploadedFile
 
 from .models import *
 from .queries import *
+from .utils import *
+
 from PIL import Image
 from rembg import remove
 from itertools import groupby
@@ -56,6 +58,35 @@ def filter_and_rank(context):
         ranked_queues[rec["type"]].append(rec)
 
     return ranked_queues
+
+
+def get_target_colors(color):
+    """
+    Get complementary and analogous colors for a given CIELAB color.
+
+    Args:
+        color: Tuple of (L*, a*, b*) values in CIELAB color space
+
+    Returns:
+        List of 3 CIELAB colors: [complementary, analogous1, analogous2]
+    """
+    l, a, b = color
+
+    # Convert to HCL
+    h, c, l = lab_to_hcl(l, a, b)
+
+    # Calculate target hues
+    h_complement = (h + 180) % 360  # Complementary color (opposite on wheel)
+    h_analogous1 = (h + 30) % 360   # First analogous (30 degrees clockwise)
+    h_analogous2 = (h - 30) % 360   # Second analogous (30 degrees counter-clockwise)
+
+    # Convert back to LAB
+    complement = hcl_to_lab(h_complement, c, l)
+    analogous1 = hcl_to_lab(h_analogous1, c, l)
+    analogous2 = hcl_to_lab(h_analogous2, c, l)
+
+    return [complement, analogous1, analogous2]
+
 
 def item_match(ranked):
     """
