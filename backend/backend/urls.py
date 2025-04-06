@@ -27,5 +27,6 @@ urlpatterns = [
     path('utilization/get', views.get_utilization),
     path('background/remove', views.remove_background),
     path('categories/get', views.get_categories),
-    path('declutter/get', views.get_declutter)
+    path('declutter/get', views.get_declutter),
+    path('declutter/post', views.post_declutter)
 ]

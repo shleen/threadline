@@ -117,7 +117,7 @@ struct GenerateView: View {
                 }
                 Spacer()
             }
-            .navigationTitle(Text("Your Recommendations"))
+            .navigationTitle(Text("Your Recommendation"))
             
         }
     }

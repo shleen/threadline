@@ -24,6 +24,8 @@ struct LogOutfitItemView: View {
                     image
                         .resizable()
                         .scaledToFill()
+                        .aspectRatio(1, contentMode: .fill)
+                        .frame(width: 90, height: 90)
                 } else if phase.error != nil {
                     Color.red // display an error placeholder
                 } else {

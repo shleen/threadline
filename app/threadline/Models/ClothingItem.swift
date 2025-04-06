@@ -19,7 +19,7 @@ struct Clothing: Codable, Identifiable {
     let layerable: Bool
     let precip: String?
     let occasion: String
-    let winter: Bool
+    let weather: String
     let created_at: String
     let tags: [Tag]
     
