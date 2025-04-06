@@ -58,22 +58,6 @@ struct RecentView: View {
         }
     }
     
-    // Convert UTC timestamp to local time
-    func convertUTCToLocal(_ utcString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds] // Handles standard UTC format
-
-        if let utcDate = formatter.date(from: utcString) {
-            let localFormatter = DateFormatter()
-            localFormatter.dateStyle = .medium
-//            localFormatter.timeStyle = .short
-            localFormatter.timeZone = .current // Convert to local time
-
-            return localFormatter.string(from: utcDate)
-        }
-        return "Invalid Date"
-    }
-    
     //function to handle each outfit category
     @ViewBuilder
     func outfitCategory(_ category: [RecentItem]?) -> some View {
@@ -129,4 +113,20 @@ struct RecentView: View {
             }
         }.resume()
     }
+}
+
+// Convert UTC timestamp to local time
+func convertUTCToLocal(_ utcString: String) -> String {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds] // Handles standard UTC format
+
+    if let utcDate = formatter.date(from: utcString) {
+        let localFormatter = DateFormatter()
+        localFormatter.dateStyle = .medium
+//            localFormatter.timeStyle = .short
+        localFormatter.timeZone = .current // Convert to local time
+
+        return localFormatter.string(from: utcDate)
+    }
+    return "Invalid Date"
 }

@@ -31,69 +31,87 @@ struct DeclutterView: View {
                 Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Least Worn Items")
-                            .font(.headline)
-                            .padding(.top, 15)
-                            .padding(.leading, 15)
-                        
-                        VStack {
-                            if let declutter = declutter {
-                                if declutter.declutter.isEmpty {
-                                    Text("No items to declutter at this time")
-                                }
-                                else {
-                                    ForEach(declutter.declutter, id: \.id) { decl in
-                                        HStack(spacing: 12) {
-                                            AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(decl.img_filename)")) { image in
-                                                image
-                                                    .resizable()
-                                                    .aspectRatio(contentMode: .fill)
-                                            } placeholder: {
-                                                Color.gray
-                                            }
-                                            .frame(width: 120, height: 120)
-                                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                                            .padding(.top, 8)
-                                            .padding(.trailing, 35)
-                                            
-                                            VStack {
-                                                if let timestamp = decl.recent {
-                                                    Text("Last Worn \(timestamp)")
+                        if isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if let error = errorMessage {
+                            Text(error)
+                                .foregroundColor(.red)
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            Text("Least Worn Items")
+                                .font(.headline)
+                                .padding(.top, 15)
+                                .padding(.leading, 15)
+                            
+                            VStack {
+                                if let declutter = declutter {
+                                    if declutter.declutter.isEmpty {
+                                        Text("No items to declutter at this time")
+                                            .foregroundColor(.secondary)
+                                            .padding(.vertical, 8)
+                                            .padding(.horizontal)
+                                            .background(Color.white)
+                                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                                            .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y: 5)
+                                    }
+                                    else {
+                                        ForEach(declutter.declutter, id: \.id) { decl in
+                                            HStack(spacing: 12) {
+                                                AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(decl.img_filename)")) { image in
+                                                    image
+                                                        .resizable()
+                                                        .aspectRatio(contentMode: .fill)
+                                                } placeholder: {
+                                                    Color.gray
                                                 }
-                                                Text(wearCountText(decl.wear_counts))
-                                            }
-                                            
-                                            Button(action: {
-                                                Task { await deleteGarm([decl.id]) }
-                                            }) {
-                                                Image(systemName: "trash")
-                                                    .imageScale(.large)
-                                                    .foregroundStyle(.red)
+                                                .frame(width: 120, height: 120)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .padding(.top, 8)
+                                                
+                                                VStack {
+                                                    Text(wearCountText(decl.wear_counts))
+                                                    if let timestamp = decl.recent {
+                                                        Text("\(convertUTCToLocal(timestamp))")
+                                                            .foregroundStyle(.blue)
+                                                    }
+                                                }
+                                                .padding(.leading, 15)
+                                                .padding(.trailing, 35)
+                                                
+                                                
+                                                Button(action: {
+                                                    Task { await deleteGarm([decl.id]) }
+                                                }) {
+                                                    Image(systemName: "trash")
+                                                        .imageScale(.large)
+                                                        .foregroundStyle(.red)
+                                                }
                                             }
                                         }
+                                        Button(action: {
+                                            Task { await deleteGarm(declutter.declutter.map {$0.id}) }
+                                        }) {
+                                            Text("Remove All")
+                                                .font(.headline)
+                                                .foregroundColor(.white)
+                                                .padding()
+                                                .frame(maxWidth: .infinity)
+                                                .background(Color.red)
+                                                .cornerRadius(10)
+                                                .padding(.horizontal, 10)
+                                                .padding(.bottom, 15)
+                                        }
+                                        .padding(.top, 4)
                                     }
-                                    Button(action: {
-                                        Task { await deleteGarm(declutter.declutter.map {$0.id}) }
-                                    }) {
-                                        Text("Remove All")
-                                            .font(.headline)
-                                            .foregroundColor(.white)
-                                            .padding()
-                                            .frame(maxWidth: .infinity)
-                                            .background(Color.red)
-                                            .cornerRadius(10)
-                                            .padding(.horizontal, 10)
-                                            .padding(.bottom, 15)
-                                    }
-                                    .padding(.top, 4)
                                 }
                             }
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
+                            .padding(.top, 4)
+                            .padding([.leading, .trailing], 15)
                         }
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
-                        .padding(.top, 4)
-                        .padding([.leading, .trailing], 15)
                     }
                 }
             }
@@ -160,6 +178,7 @@ struct DeclutterView: View {
         } catch {
             errorMessage = "Failed to load declutter items: \(error)"
         }
+        isLoading = false
     }
 }
 

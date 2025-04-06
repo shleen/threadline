@@ -128,20 +128,25 @@ struct AnalyticsView: View {
                 Text("No outfits logged this month")
                     .foregroundColor(.secondary)
                     .padding(.vertical, 8)
+                    .padding(.horizontal)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y: 5)
             }
-            
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(utilization.utilization, id: \.util_type) { util in
-                    utilizationRow(util.util_type, util.percent)
+            else {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(utilization.utilization, id: \.util_type) { util in
+                        utilizationRow(util.util_type, util.percent)
+                    }
+                    
                 }
-                            
+                .padding(.leading, 25)
+                .padding(.bottom, 15)
+                .padding(.top, 15)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
             }
-            .padding(.leading, 25)
-            .padding(.bottom, 15)
-            .padding(.top, 15)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
         }
     }
     
