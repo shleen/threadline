@@ -89,7 +89,7 @@ def create_clothing(request):
         layerable=layerable,
         precip=precip,
         occasion=occasion,
-        winter=winter,
+        weather=Clothing.Weather.WINTER if winter else Clothing.Weather.SUMMER,
         user=user
     )
 
