@@ -69,9 +69,15 @@ def create_clothing(request):
         return HttpResponseBadRequest("Provided 'image' is larger than the 10MB limit. Please try again.")
 
     # TODO: Get color
-    red = fields["red"]
-    green = fields["green"]
-    blue = fields["blue"]
+    try:
+        red = int(fields["red"])
+        green = int(fields["green"])
+        blue = int(fields["blue"])
+        if red < 0 or green < 0 or blue < 0:
+            raise ValueError
+    except ValueError:
+        return HttpResponseBadRequest("Error: the color fields (red, green, blue), must be a non-negative integer")
+
 
     (color_lstar, color_astar, color_bstar) = rgb_to_lab((red, green, blue))
 
@@ -151,14 +157,12 @@ def get_closet(request):
         # Add tags to each item
         item['tags'] = list(Tags.objects.filter(clothing_id=item['id']).values('label', 'value'))
         # Add RGB Values converted from CIELAB
-        lstar = Clothing.objects.filter(clothing_id=item['id'].values('color_lstar'))
-        astar = Clothing.objects.filter(clothing_id=item['id'].values('color_astar'))
-        bstar = Clothing.objects.filter(clothing_id=item['id'].values('color_bstar'))
-        (r,g,b) = lab_to_rgb((lstar,astar,bstar))
-        item['red'] = r
-        item['green'] = g
-        item['blue'] = b
-
+        lab_colors = Clothing.objects.filter(id=item['id']).values_list('color_lstar', 'color_astar', 'color_bstar')
+        rgb_colors = list()
+        for color in lab_colors:
+            (r,g,b) = lab_to_rgb(color)
+            rgb_colors.append((r,g,b))
+        item['colors'] = rgb_colors
 
     response_data = {'items': clothing_list}
     return JsonResponse(response_data)
