@@ -203,10 +203,6 @@ struct TagView: View {
                 } message: {
                     Text("Upload an image of a clothing item to get started.")
                 }
-                .onAppear {
-                    // Show options dialog when view appears
-                    showingOptions = true
-                }
                 .overlay(alignment: .bottom) {
                     if showSuccessSnackbar {
                         Text("\(selectedCategory ?? "Item") created successfully!")

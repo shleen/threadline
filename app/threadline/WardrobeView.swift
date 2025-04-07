@@ -32,7 +32,7 @@ struct WardrobeView: View {
                                 image
                                     .resizable()
                                     .aspectRatio(1, contentMode: .fill)
-                                    .frame(width: 100, height: 100)
+                                    .frame(width: 115, height: 115)
                                     .clipped()
                                     .cornerRadius(10)
                                     .background(Color.white)
@@ -54,7 +54,7 @@ struct WardrobeView: View {
             .navigationTitle(Text("Wardrobe"))
         }
         .sheet(item: $selectedItem) { item in
-            ClothingDetailView(item: item)
+            ClothingDetailView(item: item, clothingItems: $clothingItems)
         }
         .onAppear {
             fetchCloset()
@@ -91,6 +91,7 @@ struct WardrobeView: View {
 
 struct ClothingDetailView: View {
     let item: Clothing
+    @Binding var clothingItems: [Clothing]
     @Environment(UrlStore.self) private var urlStore
     @Environment(\.dismiss) private var dismiss
     
@@ -143,6 +144,24 @@ struct ClothingDetailView: View {
             .navigationTitle("Item Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: {
+                        // Remove from UI
+                        clothingItems.removeAll(where: { [item.id].contains($0.id) })
+                        
+                        // POST to declutter endpoint
+                        Task {
+                            await postDeclutter([item.id], urlStore.serverUrl)
+                        }
+                        
+                        // Dismiss pop up
+                        dismiss()
+                    }) {
+                        Image(systemName: "trash")
+                            .imageScale(.large)
+                            .foregroundStyle(.red)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()

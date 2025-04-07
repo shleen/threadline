@@ -8,13 +8,9 @@
 import SwiftUI
 
 struct RecentOutfit: Codable {
-    let TOP: [RecentItem]?
-    let BOTTOM: [RecentItem]?
-    let OUTERWEAR: [RecentItem]?
-    let DRESS: [RecentItem]?
-    let SHOES: [RecentItem]?
     let outfit_id: Int
     let timestamp: String
+    let clothes: [RecentItem]?
 }
 
 struct RecentItem: Codable {
@@ -33,7 +29,6 @@ struct RecentView: View {
         NavigationView {
             ZStack {
                 Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
-                
                 ScrollView {
                     VStack(spacing: 20) {
                         ForEach(outfits, id: \.outfit_id) { outfit in
@@ -43,11 +38,7 @@ struct RecentView: View {
                                     .padding([.leading, .top], 16)
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 5) {
-                                        outfitCategory(outfit.TOP)
-                                        outfitCategory(outfit.BOTTOM)
-                                        outfitCategory(outfit.OUTERWEAR)
-                                        outfitCategory(outfit.DRESS)
-                                        outfitCategory(outfit.SHOES)
+                                        outfitCategory(outfit.clothes)
                                     }
                                     .padding(.horizontal)
                                 }
@@ -62,25 +53,9 @@ struct RecentView: View {
                 .onAppear {
                     fetchOutfits()
                 }
-                .navigationTitle(Text("Previous Outfits"))
             }
+           .navigationBarTitle(Text("Previous Outfits"))
         }
-    }
-    
-    // Convert UTC timestamp to local time
-    func convertUTCToLocal(_ utcString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds] // Handles standard UTC format
-
-        if let utcDate = formatter.date(from: utcString) {
-            let localFormatter = DateFormatter()
-            localFormatter.dateStyle = .medium
-//            localFormatter.timeStyle = .short
-            localFormatter.timeZone = .current // Convert to local time
-
-            return localFormatter.string(from: utcDate)
-        }
-        return "Invalid Date"
     }
     
     //function to handle each outfit category
@@ -104,7 +79,7 @@ struct RecentView: View {
                     .scaledToFit()
                     .frame(width: 110, height: 110)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .shadow(radius: 5)
+//                    .shadow(radius: 5)
                     .padding(.bottom, 30)
                     .padding(.top, 10)
             case .failure:
@@ -138,4 +113,20 @@ struct RecentView: View {
             }
         }.resume()
     }
+}
+
+// Convert UTC timestamp to local time
+func convertUTCToLocal(_ utcString: String) -> String {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds] // Handles standard UTC format
+
+    if let utcDate = formatter.date(from: utcString) {
+        let localFormatter = DateFormatter()
+        localFormatter.dateStyle = .medium
+//            localFormatter.timeStyle = .short
+        localFormatter.timeZone = .current // Convert to local time
+
+        return localFormatter.string(from: utcDate)
+    }
+    return "Invalid Date"
 }

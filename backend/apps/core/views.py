@@ -88,7 +88,7 @@ def create_clothing(request):
         layerable=layerable,
         precip=precip,
         occasion=occasion,
-        winter=winter,
+        weather=Clothing.Weather.WINTER if winter else Clothing.Weather.SUMMER,
         user=user
     )
 
@@ -143,7 +143,7 @@ def get_closet(request):
         'layerable',
         'precip',
         'occasion',
-        'winter',
+        'weather',
         'created_at'
     ))
 
@@ -329,3 +329,29 @@ def process_image(request):
 @require_method('GET')
 def get_categories(_):
     return JsonResponse(pull_clothing_tags())
+
+@csrf_exempt
+@require_method('GET')
+def get_declutter(request):
+    username = request.GET.get('username')
+
+    if username is None:
+        return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
+
+    return JsonResponse({
+        "declutter": pull_declutter({"username": username})
+    })
+
+@csrf_exempt
+@require_method('POST')
+def post_declutter(request):
+    ## Validate and extract request fields
+    fields = json.loads(request.body.decode('utf-8'))
+    try:
+        ids = fields["ids"]
+        print(ids)
+
+        # Todo: Implement soft delete given the list of ids
+        return HttpResponse(status=200)
+    except:
+        return HttpResponseBadRequest(f"Required field 'ids' not provided. Please try again.\n")

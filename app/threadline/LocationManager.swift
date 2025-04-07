@@ -21,8 +21,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private override init() {
         super.init()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
         locationManager.requestWhenInUseAuthorization()
+    }
+
+    func requestLocation() {
+        locationManager.requestLocation()
     }
 
     func requestLocation(completion: @escaping (CLLocation) -> Void) {

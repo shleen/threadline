@@ -15,24 +15,32 @@ struct GenerateView: View {
     @ObservedObject private var locationManager = LocationManager.shared
 
     @State private var outfits: [Outfit] = []
-    @State private var selectedOutfit: Outfit?
     @State private var currentIndex: Int = 0
     @State private var isOutfitConfirmed: Bool = false
     @State private var isSwapViewPresented: Bool = false
     @State private var itemToSwap: ClothingItem?
     @State private var categoryToSwap: String?
+    @State private var isLoading: Bool = false
+    @State private var showError: Bool = false
     
     var body: some View {
         NavigationView {
             ZStack {
                 Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
-                VStack {
-                    if let selectedOutfit = selectedOutfit {
-                        let items = getAllItems(from: selectedOutfit)
-                        let columns = getColumns(for: items.count)
-                        
+
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                } else if showError || outfits.isEmpty {
+                    ErrorView(showError: $showError, fetchOutfits: fetchOutfits)
+                } else {
+                    VStack {
+                        let selectedOutfit = outfits[currentIndex]
+                        let columns = Array(repeating: GridItem(.flexible()), count: selectedOutfit.clothes.count)
+
                         LazyVGrid(columns: columns, spacing: 20) {
-                            ForEach(items) { item in
+                            ForEach(selectedOutfit.clothes) { item in
                                 VStack {
                                     AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
                                         if let image = phase.image {
@@ -42,17 +50,12 @@ struct GenerateView: View {
                                                 .frame(width: 115, height: 115)
                                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                         } else {
-                                            Image("Example")
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: 115, height: 115)
-                                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                .foregroundColor(.gray)
+                                            Color.gray
                                         }
                                     }
                                     Button(action: {
                                         itemToSwap = item
-                                        categoryToSwap = getCategory(for: item)
+                                        categoryToSwap = item.type
                                         isSwapViewPresented = true
                                     }) {
                                         Image(systemName: "arrow.swap")
@@ -62,92 +65,106 @@ struct GenerateView: View {
                                 }
                             }
                         }
-                    }
-                    
-                    if !isOutfitConfirmed {
-                        Button(action: {
-                            nextOutfit()
-                        }) {
-                            Text("Next Outfit")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.blue)
-                                .cornerRadius(10)
-                                .padding(.horizontal, 20)
-                        }
                         
-                        Button(action: {
-                            confirmOutfit()
-                        }) {
-                            Text("Confirm")
+                        if !isOutfitConfirmed {
+                            Button(action: {
+                                nextOutfit()
+                            }) {
+                                Text("Next Outfit")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.blue)
+                                    .cornerRadius(10)
+                                    .padding(.horizontal, 20)
+                            }
+
+                            Button(action: {
+                                confirmOutfit()
+                            }) {
+                                Text("Confirm")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.green)
+                                    .cornerRadius(10)
+                                    .padding(.horizontal, 20)
+                            }
+                            .padding(.top, 10)
+                        } else {
+                            Text("Outfit Confirmed")
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(.green)
                                 .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.green)
-                                .cornerRadius(10)
-                                .padding(.horizontal, 20)
                         }
-                        .padding(.top, 10)
-                    } else {
-                        Text("Outfit Confirmed")
-                            .font(.headline)
-                            .foregroundColor(.green)
-                            .padding()
                     }
-                }
-                .padding(.bottom, 48)
-                .padding(.top, 50)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .padding(.horizontal, 15)
-                .padding(.bottom, 135)
-                .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
-                .onAppear {
-                    fetchOutfits()
-                }
-                .sheet(isPresented: $isSwapViewPresented) {
-                    if let category = categoryToSwap {
-                        SwapItemView(category: category, onItemSelected: { newItem in
-                            swapItem(newItem: newItem)
-                        })
-                    }
+                    .padding(.bottom, 48)
+                    .padding(.top, 50)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(.horizontal, 15)
+                    .padding(.bottom, 135)
+                    .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y:5)
                 }
                 Spacer()
             }
-            .navigationTitle(Text("Your Recommendations"))
-            
+            .navigationTitle(Text("Your Recommendation"))
+            .sheet(isPresented: $isSwapViewPresented) {
+                SwapItemView(category: $categoryToSwap, onItemSelected: { newItem in
+                    swapItem(newItem: newItem)
+                })
+            }
+            .onAppear {
+                fetchOutfits()
+            }
         }
     }
     
     func fetchOutfits() {
+        isLoading = true
+        showError = false
+
         locationManager.requestLocation { location in
             let lat = location.coordinate.latitude
             let lon = location.coordinate.longitude
 
             guard let url = URL(string: "\(urlStore.serverUrl)/recommendation/get?username=\(username)&lat=\(lat)&lon=\(lon)") else {
                 print("Invalid URL")
+                DispatchQueue.main.async {
+                    isLoading = false
+                    showError = true
+                }
                 return
             }
-            print("here")
 
             URLSession.shared.dataTask(with: url) { data, response, error in
-                if let data = data {
-                    do {
-                        let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
-                        if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
-                            DispatchQueue.main.async {
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("Error fetching outfits: \(error)")
+                        showError = true
+                        return
+                    }
+
+                    if let data = data {
+                        do {
+                            let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
+                            if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
                                 self.outfits = fetchedOutfits
-                                print("hello")
-                                self.selectedOutfit = fetchedOutfits.first
                                 self.currentIndex = 0
-                                printOutfits(outfits: fetchedOutfits) // Print the contents of the outfits array
+                                printOutfits(outfits: fetchedOutfits)
+
+                                isLoading = false
+                            } else {
+                                showError = true
                             }
+                        } catch {
+                            print("Error decoding JSON: \(error)")
+                            showError = true
                         }
-                    } catch {
-                        print("Error decoding JSON: \(error)")
+                    } else {
+                        showError = true
                     }
                 }
             }.resume()
@@ -157,84 +174,45 @@ struct GenerateView: View {
     func printOutfits(outfits: [Outfit]) {
         for (index, outfit) in outfits.enumerated() {
             print("Outfit \(index + 1):")
-            if let tops = outfit.TOP {
-                print("  TOP: \(tops.map { $0.img })")
-            }
-            if let bottoms = outfit.BOTTOM {
-                print("  BOTTOM: \(bottoms.map { $0.img })")
-            }
-            if let outerwears = outfit.OUTERWEAR {
-                print("  OUTERWEAR: \(outerwears.map { $0.img })")
-            }
-            if let dresses = outfit.DRESS {
-                print("  DRESS: \(dresses.map { $0.img })")
-            }
-            if let shoes = outfit.SHOES {
-                print("  SHOES: \(shoes.map { $0.img })")
-            }
+            print("  \(outfit.clothes.map { $0.img })")
         }
     }
 
     func nextOutfit() {
         guard !outfits.isEmpty else { return }
         currentIndex = (currentIndex + 1) % outfits.count
-        selectedOutfit = outfits[currentIndex]
     }
 
     func confirmOutfit() {
-        isOutfitConfirmed = true
-        if let selectedOutfit = selectedOutfit {
-            print("Outfit:")
-            if let tops = selectedOutfit.TOP {
-                print("  TOP: \(tops.map { $0.img })")
-            }
-            if let bottoms = selectedOutfit.BOTTOM {
-                print("  BOTTOM: \(bottoms.map { $0.img })")
-            }
-            if let outerwears = selectedOutfit.OUTERWEAR {
-                print("  OUTERWEAR: \(outerwears.map { $0.img })")
-            }
-            if let dresses = selectedOutfit.DRESS {
-                print("  DRESS: \(dresses.map { $0.img })")
-            }
-            if let shoes = selectedOutfit.SHOES {
-                print("  SHOES: \(shoes.map { $0.img })")
-            }
-            
-            // Send confirmed outfit to the server
-            sendConfirmedOutfit(outfit: selectedOutfit)
-        }
-    }
-    
-    func sendConfirmedOutfit(outfit: Outfit) {
+        let selectedOutfit = outfits[currentIndex]
+
+        print("Outfit:")
+        print(selectedOutfit)
+
         guard let url = URL(string: "\(urlStore.serverUrl)/outfit/post") else {
             print("Invalid URL")
             return
         }
-        
-        var clothingIds: [Int] = []
-        if let tops = outfit.TOP { clothingIds.append(contentsOf: tops.map { $0.id }) }
-        if let bottoms = outfit.BOTTOM { clothingIds.append(contentsOf: bottoms.map { $0.id }) }
-        if let outerwears = outfit.OUTERWEAR { clothingIds.append(contentsOf: outerwears.map { $0.id }) }
-        if let dresses = outfit.DRESS { clothingIds.append(contentsOf: dresses.map { $0.id }) }
-        if let shoes = outfit.SHOES { clothingIds.append(contentsOf: shoes.map { $0.id }) }
-        
+
         let payload: [String: Any] = [
             "username": username,
-            "clothing_ids": clothingIds
+            "clothing_ids": selectedOutfit.clothes.map { $0.id }
         ]
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
         } catch {
             print("Error serializing JSON: \(error)")
             return
         }
-        
+
+        isOutfitConfirmed = true
+
+        // Send confirmed outfit to the server
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 print("Error sending confirmed outfit: \(error)")
@@ -248,78 +226,40 @@ struct GenerateView: View {
         }.resume()
     }
     
-    func getAllItems(from outfit: Outfit) -> [ClothingItem] {
-        var items: [ClothingItem] = []
-        if let tops = outfit.TOP { items.append(contentsOf: tops) }
-        if let bottoms = outfit.BOTTOM { items.append(contentsOf: bottoms) }
-        if let outerwears = outfit.OUTERWEAR { items.append(contentsOf: outerwears) }
-        if let dresses = outfit.DRESS { items.append(contentsOf: dresses) }
-        if let shoes = outfit.SHOES { items.append(contentsOf: shoes) }
-        return items
-    }
-    
-    func getColumns(for itemCount: Int) -> [GridItem] {
-        switch itemCount {
-        case 2:
-            return [GridItem(.flexible()), GridItem(.flexible())]
-        case 3:
-            return [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-        case 4:
-            return [GridItem(.flexible()), GridItem(.flexible())]
-        case 5:
-            return [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-        case 6:
-            return [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-        default:
-            return [GridItem(.flexible())]
-        }
-    }
-    
-    func getCategory(for item: ClothingItem) -> String? {
-        if selectedOutfit?.TOP?.contains(where: { $0.id == item.id }) == true {
-            return "TOP"
-        } else if selectedOutfit?.BOTTOM?.contains(where: { $0.id == item.id }) == true {
-            return "BOTTOM"
-        } else if selectedOutfit?.OUTERWEAR?.contains(where: { $0.id == item.id }) == true {
-            return "OUTERWEAR"
-        } else if selectedOutfit?.DRESS?.contains(where: { $0.id == item.id }) == true {
-            return "DRESS"
-        } else if selectedOutfit?.SHOES?.contains(where: { $0.id == item.id }) == true {
-            return "SHOES"
-        }
-        return nil
-    }
-    
     func swapItem(newItem: ClothingItem) {
-        guard let category = categoryToSwap else { return }
-        guard var outfit = selectedOutfit else { return }
-        
-        switch category {
-        case "TOP":
-            if let index = outfit.TOP?.firstIndex(where: { $0.id == itemToSwap?.id }) {
-                outfit.TOP?[index] = newItem
-            }
-        case "BOTTOM":
-            if let index = outfit.BOTTOM?.firstIndex(where: { $0.id == itemToSwap?.id }) {
-                outfit.BOTTOM?[index] = newItem
-            }
-        case "OUTERWEAR":
-            if let index = outfit.OUTERWEAR?.firstIndex(where: { $0.id == itemToSwap?.id }) {
-                outfit.OUTERWEAR?[index] = newItem
-            }
-        case "DRESS":
-            if let index = outfit.DRESS?.firstIndex(where: { $0.id == itemToSwap?.id }) {
-                outfit.DRESS?[index] = newItem
-            }
-        case "SHOES":
-            if let index = outfit.SHOES?.firstIndex(where: { $0.id == itemToSwap?.id }) {
-                outfit.SHOES?[index] = newItem
-            }
-        default:
-            break
+        // Replace itemToSwap with newItem in outfits[currentIndex]
+        if let item_index = outfits[currentIndex].clothes.firstIndex(where: { $0.id == itemToSwap?.id }) {
+            outfits[currentIndex].clothes[item_index] = newItem
         }
-        
-        outfits[currentIndex] = outfit
-        selectedOutfit = outfit
+    }
+}
+
+struct ErrorView: View {
+    @Binding var showError: Bool
+    @State var fetchOutfits: () -> Void
+
+    var body: some View {
+        VStack {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 50))
+                .foregroundColor(.red)
+                .padding()
+            Text("Outfit recommendations failed. Please try again later.")
+                .multilineTextAlignment(.center)
+                .padding()
+            Button(action: {
+                showError = false
+                fetchOutfits()
+            }) {
+                Text("Try Again")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue)
+                    .cornerRadius(10)
+                    .padding(.horizontal, 20)
+            }
+        }
     }
 }

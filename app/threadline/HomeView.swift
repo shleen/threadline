@@ -10,6 +10,8 @@ import SwiftUI
 struct HomeView: View {
     @AppStorage("username") private var username: String = ""
 
+    @ObservedObject private var locationManager = LocationManager.shared
+
     @State private var isPresentingLogOutfitView: Bool = false
     @State private var isPresentingWardrobeView: Bool = false
     @State private var isPresentingGenerateView: Bool = false
@@ -46,7 +48,12 @@ struct HomeView: View {
                         Text("Statistics")
                     }
                     .tag(3)
-
+                DeclutterView()
+                    .tabItem {
+                        Image(systemName: "trash")
+                        Text("Declutter")
+                    }
+                    .tag(4)
             }
             
             // Shadow effect at the top of the navbar
@@ -55,6 +62,10 @@ struct HomeView: View {
                 .frame(height: 1)
                 .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: -3)
                 .offset(y: -49) // Adjust for tab bar height
+        }
+        .onAppear {
+            // Eagerly request location to reduce latency in GenerateView
+            locationManager.requestLocation()
         }
     }
 

@@ -4,6 +4,8 @@ from django.core.files.uploadedfile import UploadedFile
 
 from .models import *
 from .queries import *
+from .utils import *
+
 from PIL import Image
 from rembg import remove
 from colorthief import ColorThief
@@ -58,6 +60,35 @@ def filter_and_rank(context):
 
     return ranked_queues
 
+
+def get_target_colors(color):
+    """
+    Get complementary and analogous colors for a given CIELAB color.
+
+    Args:
+        color: Tuple of (L*, a*, b*) values in CIELAB color space
+
+    Returns:
+        List of 3 CIELAB colors: [complementary, analogous1, analogous2]
+    """
+    l, a, b = color
+
+    # Convert to HCL
+    h, c, l = lab_to_hcl(l, a, b)
+
+    # Calculate target hues
+    h_complement = (h + 180) % 360  # Complementary color (opposite on wheel)
+    h_analogous1 = (h + 30) % 360   # First analogous (30 degrees clockwise)
+    h_analogous2 = (h - 30) % 360   # Second analogous (30 degrees counter-clockwise)
+
+    # Convert back to LAB
+    complement = hcl_to_lab(h_complement, c, l)
+    analogous1 = hcl_to_lab(h_analogous1, c, l)
+    analogous2 = hcl_to_lab(h_analogous2, c, l)
+
+    return [complement, analogous1, analogous2]
+
+
 def item_match(ranked):
     """
     Matches clothes from ranking stage to form outfits. The full
@@ -78,7 +109,7 @@ def item_match(ranked):
                 continue
 
             garment = queue.pop()
-            clothes.append({"id": garment["id"], "img": garment["img_filename"]})
+            clothes.append({"id": garment["id"], "img": garment["img_filename"], "type": k})
 
         outfits.append({"clothes": clothes})
 
@@ -117,12 +148,13 @@ def compute_utilization(context):
     each type of clothing that has been worn within the past month
     """
     utilization = execute_read_query(utilization_query(), [context["username"]])
+    util_types = list(filter(lambda util: util["util_type"] != "TOTAL", utilization))
+
 
     return {
-        "TOTAL": [util["percent"] for util in utilization if util["util_type"] == "TOTAL"][0],
-        "utilization": list(filter(lambda util: util["util_type"] != "TOTAL", utilization))
+        "TOTAL": [float(util["percent"]) for util in utilization if util["util_type"] == "TOTAL"][0],
+        "utilization":  list(map(lambda ut: {"util_type": ut["util_type"], "percent": float(ut["percent"])}, util_types))
     }
-
 
 def compute_rewears(context):
     """
@@ -213,7 +245,6 @@ def get_weather(lat, lon):
         elif 600 <= weather_id <= 699:
             precip = Clothing.Precip.SNOW
 
-
         # If More seasons/conditions added, add more match arms
         weather = None
         match temp:
@@ -301,3 +332,9 @@ def lab_to_rgb(lab):
         rgb[i] = max(0, min(255, round(rgb[i])))
 
     return tuple(rgb)
+
+def pull_declutter(context):
+    """
+    Pulls recommended items to declutter
+    """
+    return execute_read_query(declutter_query(), [context["username"]])
