@@ -26,6 +26,6 @@ urlpatterns = [
     path('outfit/post', views.log_outfit),
     path('utilization/get', views.get_utilization),
     path('background/remove', views.remove_background),
-    path('image/process', views.process_image)
+    path('image/process', views.process_image),
     path('categories/get', views.get_categories)
 ]
