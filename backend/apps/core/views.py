@@ -20,7 +20,7 @@ def create_clothing(request):
     fields = request.POST
 
     # Required fields
-    required_fields = ["username", "type", "fit", "occasion", "winter", "red", "green", "blue"]
+    required_fields = ["username", "type", "fit", "occasion", "winter", "red", "red_secondary", "green", "green_secondary", "blue", "blue_secondary"]
     for field in required_fields:
         if field not in fields:
             return HttpResponseBadRequest(f"Required field '{field}' not provided. Please try again.")
@@ -73,13 +73,16 @@ def create_clothing(request):
         red = int(fields["red"])
         green = int(fields["green"])
         blue = int(fields["blue"])
-        if red < 0 or green < 0 or blue < 0:
+        red_secondary = int(fields["red_secondary"])
+        green_secondary = int(fields["green_secondary"])
+        blue_secondary = int(fields["blue_secondary"])
+        if red < 0 or red_secondary < 0 or green < 0 or green_secondary < 0 or blue < 0 or blue_secondary < 0:
             raise ValueError
     except ValueError:
         return HttpResponseBadRequest("Error: the color fields (red, green, blue), must be a non-negative integer")
 
-
-    (color_lstar, color_astar, color_bstar) = rgb_to_lab((red, green, blue))
+    (lstar_primary, astar_primary, bstar_primary) = rgb_to_lab((red, green, blue))
+    (lstar_secondary, astar_secondary, bstar_secondary) = rgb_to_lab((red_secondary, green_secondary, blue_secondary))
 
     ## Insert clothing item to DB
     user = get_or_create_user(username)
@@ -87,9 +90,12 @@ def create_clothing(request):
         type=clothing_type,
         subtype=subtype,
         img_filename=filename,
-        color_lstar=color_lstar,
-        color_astar=color_astar,
-        color_bstar=color_bstar,
+        color_lstar=lstar_primary,
+        color_astar=astar_primary,
+        color_bstar=bstar_primary,
+        color_lstar_2nd=lstar_primary,
+        color_astar_2nd=astar_primary,
+        color_bstar_2nd=bstar_primary,
         fit=fit,
         layerable=layerable,
         precip=precip,
@@ -158,11 +164,19 @@ def get_closet(request):
         item['tags'] = list(Tags.objects.filter(clothing_id=item['id']).values('label', 'value'))
         # Add RGB Values converted from CIELAB
         lab_colors = Clothing.objects.filter(id=item['id']).values_list('color_lstar', 'color_astar', 'color_bstar')
+        lab_colors_2nd = Clothing.objects.filter(id=item['id']).values_list('color_lstar_2nd', 'color_astar_2nd', 'color_bstar_2nd')
         rgb_colors = list()
+        rgb_colors_2nd = list()
+
         for color in lab_colors:
             (r,g,b) = lab_to_rgb(color)
             rgb_colors.append((r,g,b))
-        item['colors'] = rgb_colors
+        item['colors_primary'] = rgb_colors
+
+        for color_2nd in lab_colors_2nd:
+            (r,g,b) = lab_to_rgb(color_2nd)
+            rgb_colors_2nd.append((r,g,b))
+        item['colors_secondary'] = rgb_colors_2nd
 
     response_data = {'items': clothing_list}
     return JsonResponse(response_data)
