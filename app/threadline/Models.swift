@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct ClothingItem: Codable, Identifiable, Equatable {
+struct ClothingItem: Codable, Equatable, Hashable, Identifiable {
     let id: Int
     let img: String
     let type: String
@@ -38,7 +38,7 @@ struct ClothingItem: Codable, Identifiable, Equatable {
     }
 }
 
-struct Outfit: Codable, Equatable {
+struct Outfit: Codable, Equatable, Hashable {
     var clothes: [ClothingItem]
 }
 
