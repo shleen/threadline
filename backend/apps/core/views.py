@@ -263,37 +263,6 @@ def get_utilization(request):
         "rewears": compute_rewears({ "username": username })
     })
 
-# Returns image in base64 encoded data, with its background removed
-@csrf_exempt
-@require_method('POST')
-def remove_background(request):
-    username = request.POST.get('username')
-
-    if username is None:
-        return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
-
-    for _, file in request.FILES.items():
-        image = file
-
-    if image is None:
-        return HttpResponseBadRequest("Required field 'image' not provided. Please try again.")
-
-    if image.content_type in ['image/png']:
-        filetype = image.content_type[6:]
-    else:
-        return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png). Please try again.")
-
-
-    # Save Image to tempdir,
-    filename = f"{username}_{round(time.time()*1000)}.{filetype}"
-    image_path = save_image_in_tmp(image, filename)
-
-    #remove image background
-    img_bg_rm(image_path)
-
-    bg_free_image_file = open(image_path, 'rb')
-    return FileResponse(bg_free_image_file, content_type='image/png')
-
 @csrf_exempt
 @require_method('POST')
 def process_image(request):
@@ -325,7 +294,6 @@ def process_image(request):
     # Compress image
     compress_image(image_path)
 
-    # json_data = json.dumps([{"r": r, "g": g, "b": b} for r, g, b in color_palette], indent=2)
     json_data = json.dumps(color_palette)
 
     # Sadly, Django does not support multipart HTTP Response
