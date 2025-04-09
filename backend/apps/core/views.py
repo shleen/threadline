@@ -166,18 +166,12 @@ def get_closet(request):
         # Add RGB Values converted from CIELAB
         lab_colors = Clothing.objects.filter(id=item['id']).values_list('color_lstar', 'color_astar', 'color_bstar')
         lab_colors_2nd = Clothing.objects.filter(id=item['id']).values_list('color_lstar_2nd', 'color_astar_2nd', 'color_bstar_2nd')
-        rgb_colors = list()
-        rgb_colors_2nd = list()
 
-        for color in lab_colors:
-            (r,g,b) = lab_to_rgb(color)
-            rgb_colors.append((r,g,b))
-        item['colors_primary'] = rgb_colors
+        (r,g,b) = lab_to_rgb(lab_colors[0])
+        item['colors_primary'] = (r,g,b)
 
-        for color_2nd in lab_colors_2nd:
-            (r,g,b) = lab_to_rgb(color_2nd)
-            rgb_colors_2nd.append((r,g,b))
-        item['colors_secondary'] = rgb_colors_2nd
+        (r,g,b) = lab_to_rgb(lab_colors_2nd[0])
+        item['colors_secondary'] = (r,g,b)
 
     response_data = {'items': clothing_list}
     return JsonResponse(response_data)
