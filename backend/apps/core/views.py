@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from .decorators import require_method
 from .functions import *
+from .utils import *
 from .images import IMAGE_BUCKET, r2
 from .models import Clothing, User, Tags, Outfit, OutfitItem
 
@@ -20,7 +21,7 @@ def create_clothing(request):
     fields = request.POST
 
     # Required fields
-    required_fields = ["username", "type", "fit", "occasion", "winter"]
+    required_fields = ["username", "type", "fit", "occasion", "winter", "red", "red_secondary", "green", "green_secondary", "blue", "blue_secondary"]
     for field in required_fields:
         if field not in fields:
             return HttpResponseBadRequest(f"Required field '{field}' not provided. Please try again.")
@@ -64,17 +65,25 @@ def create_clothing(request):
 
     image_path = save_image_in_tmp(image, filename)
 
-    # Compress image
-    compress_image(image_path)
-
     # Limit image size to 10MB
     if os.path.isfile(filename) and os.path.getsize(image_path) > 10**6:
         return HttpResponseBadRequest("Provided 'image' is larger than the 10MB limit. Please try again.")
 
     # TODO: Get color
-    color_lstar = 0.0
-    color_astar = 0.0
-    color_bstar = 0.0
+    try:
+        red = int(fields["red"])
+        green = int(fields["green"])
+        blue = int(fields["blue"])
+        red_secondary = int(fields["red_secondary"])
+        green_secondary = int(fields["green_secondary"])
+        blue_secondary = int(fields["blue_secondary"])
+        if red < 0 or red_secondary < 0 or green < 0 or green_secondary < 0 or blue < 0 or blue_secondary < 0:
+            raise ValueError
+    except ValueError:
+        return HttpResponseBadRequest("Error: the color fields (red, green, blue), must be a non-negative integer")
+
+    (lstar_primary, astar_primary, bstar_primary) = rgb_to_lab((red, green, blue))
+    (lstar_secondary, astar_secondary, bstar_secondary) = rgb_to_lab((red_secondary, green_secondary, blue_secondary))
 
     ## Insert clothing item to DB
     user = get_or_create_user(username)
@@ -82,9 +91,12 @@ def create_clothing(request):
         type=clothing_type,
         subtype=subtype,
         img_filename=filename,
-        color_lstar=color_lstar,
-        color_astar=color_astar,
-        color_bstar=color_bstar,
+        color_lstar=lstar_primary,
+        color_astar=astar_primary,
+        color_bstar=bstar_primary,
+        color_lstar_2nd=lstar_secondary,
+        color_astar_2nd=astar_secondary,
+        color_bstar_2nd=bstar_secondary,
         fit=fit,
         layerable=layerable,
         precip=precip,
@@ -140,9 +152,6 @@ def get_closet(request):
         'type',
         'subtype',
         'img_filename',
-        'color_lstar',
-        'color_astar',
-        'color_bstar',
         'fit',
         'layerable',
         'precip',
@@ -150,9 +159,19 @@ def get_closet(request):
         'weather',
         'created_at'
     ))
-    # Add tags to each item
+
     for item in clothing_list:
+        # Add tags to each item
         item['tags'] = list(Tags.objects.filter(clothing_id=item['id']).values('label', 'value'))
+        # Add RGB Values converted from CIELAB
+        lab_colors = Clothing.objects.filter(id=item['id']).values_list('color_lstar', 'color_astar', 'color_bstar')
+        lab_colors_2nd = Clothing.objects.filter(id=item['id']).values_list('color_lstar_2nd', 'color_astar_2nd', 'color_bstar_2nd')
+
+        (r,g,b) = lab_to_rgb(lab_colors[0])
+        item['colors_primary'] = (r,g,b)
+
+        (r,g,b) = lab_to_rgb(lab_colors_2nd[0])
+        item['colors_secondary'] = (r,g,b)
 
     response_data = {'items': clothing_list}
     return JsonResponse(response_data)
@@ -206,10 +225,10 @@ def get_recommendations(request):
 
     # Get weather at location
     conditions = get_weather(float(lat), float(lon))
-    
-    context = { 
-        "username": username, 
-        "weather": conditions["weather"], 
+
+    context = {
+        "username": username,
+        "weather": conditions["weather"],
         "precip": conditions["precip"]
     }
     clothes = filter_and_rank(context)
@@ -244,10 +263,9 @@ def get_utilization(request):
         "rewears": compute_rewears({ "username": username })
     })
 
-# Returns image in base64 encoded data, with its background removed
 @csrf_exempt
 @require_method('POST')
-def remove_background(request):
+def process_image(request):
     username = request.POST.get('username')
 
     if username is None:
@@ -264,7 +282,6 @@ def remove_background(request):
     else:
         return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png). Please try again.")
 
-
     # Save Image to tempdir,
     filename = f"{username}_{round(time.time()*1000)}.{filetype}"
     image_path = save_image_in_tmp(image, filename)
@@ -272,9 +289,22 @@ def remove_background(request):
     #remove image background
     img_bg_rm(image_path)
 
-    bg_free_image_file = open(image_path, 'rb')
-    return FileResponse(bg_free_image_file, content_type='image/png')
+    color_palette = extract_palette(image_path)[:2]
 
+    # Compress image
+    compress_image(image_path)
+
+    json_data = json.dumps(color_palette)
+
+    # Sadly, Django does not support multipart HTTP Response
+    # Open image as base64 encoded string
+    with open(image_path, "rb") as img_file:
+        encoded_string = base64.b64encode(img_file.read()).decode('utf-8')
+
+    return JsonResponse({
+        "colors": json_data,
+        "image_base64": f"{encoded_string}"
+    })
 
 @csrf_exempt
 @require_method('GET')

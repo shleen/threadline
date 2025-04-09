@@ -8,6 +8,7 @@ from .utils import *
 
 from PIL import Image
 from rembg import remove
+from colorthief import ColorThief
 from itertools import groupby
 import os
 import requests
@@ -98,15 +99,15 @@ def item_match(ranked):
         return []
 
     outfits = []
-    while (len(ranked[Clothing.ClothingType.TOP]) > 0 and 
-           len(ranked[Clothing.ClothingType.BOTTOM]) > 0 and 
+    while (len(ranked[Clothing.ClothingType.TOP]) > 0 and
+           len(ranked[Clothing.ClothingType.BOTTOM]) > 0 and
            len(ranked[Clothing.ClothingType.SHOES]) > 0):
 
         clothes = []
         for k, queue in ranked.items():
             if k == Clothing.ClothingType.DRESS or k == Clothing.ClothingType.OUTERWEAR:
                 continue
-            
+
             garment = queue.pop()
             clothes.append({"id": garment["id"], "img": garment["img_filename"], "type": k})
 
@@ -131,7 +132,7 @@ def pull_past_outfits(context):
                 {
                     "clothing_id": cloth["clothing_id"],
                     "img": cloth["img_filename"]
-                } 
+                }
                 for cloth in group
             ]
         }
@@ -187,6 +188,12 @@ def img_bg_rm(file_path):
     output = remove(input)
     output.save(file_path)
 
+# Expects path to a png image with background removed
+# Returns List of tuples representing RGB values
+def extract_palette(file_path, num_colors=2):
+    color_thief = ColorThief(file_path)
+    return color_thief.get_palette(color_count=num_colors, quality=1)
+
 def get_weather(lat, lon):
     """
     Checks cache to see for weather info for this location. Sameness of location is determined
@@ -237,7 +244,6 @@ def get_weather(lat, lon):
             precip = Clothing.Precip.RAIN
         elif 600 <= weather_id <= 699:
             precip = Clothing.Precip.SNOW
-        
 
         # If More seasons/conditions added, add more match arms
         weather = None

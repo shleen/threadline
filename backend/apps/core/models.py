@@ -103,6 +103,9 @@ class Clothing(models.Model):
     color_lstar = models.FloatField()
     color_astar = models.FloatField()
     color_bstar = models.FloatField()
+    color_lstar_2nd = models.FloatField()
+    color_astar_2nd = models.FloatField()
+    color_bstar_2nd = models.FloatField()
 
     fit = models.CharField(choices=ClothingFit)
 
@@ -159,7 +162,7 @@ BASE_OCCASIONS = Clothing.Occasion._member_names_
 BASE_FIT = Clothing.ClothingFit._member_names_
 BASE_PRECIP = Clothing.Precip._member_names_
 BASE_SUBTYPE = [
-    {"type": typ, "subtypes": subtype._member_names_} 
+    {"type": typ, "subtypes": subtype._member_names_}
     for typ, subtype in TAG_MAPPINGS.items()
 ]
 BASE_WEATHER = Clothing.Weather._member_names_

@@ -75,6 +75,9 @@ class Command(BaseCommand):
                 color_l = random.uniform(0, 100)
                 color_a = random.uniform(-128, 128)
                 color_b = random.uniform(-128, 128)
+                color_l_2nd = random.uniform(0, 100)
+                color_a_2nd = random.uniform(-128, 128)
+                color_b_2nd = random.uniform(-128, 128)
                 fit = random.choice(fits)
                 occasion = random.choice(occasions)
                 precipitation = random.choice(precips)
@@ -95,6 +98,9 @@ class Command(BaseCommand):
                     color_lstar=color_l,
                     color_astar=color_a,
                     color_bstar=color_b,
+                    color_lstar_2nd=color_l_2nd,
+                    color_astar_2nd=color_a_2nd,
+                    color_bstar_2nd=color_b_2nd,
                     fit=fit,
                     layerable=layerable,
                     precip=precipitation,
