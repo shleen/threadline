@@ -14,15 +14,17 @@ struct GenerateView: View {
 
     @ObservedObject private var locationManager = LocationManager.shared
 
-    @State private var outfits: [Outfit] = []
-    @State private var currentIndex: Int = 0
+    @Binding var outfits: [Outfit]
+    @Binding var currentIndex: Int
+    let refetchOutfits: () -> Void
+
     @State private var isOutfitConfirmed: Bool = false
     @State private var isSwapViewPresented: Bool = false
     @State private var itemToSwap: ClothingItem?
     @State private var categoryToSwap: String?
     @State private var isLoading: Bool = false
     @State private var showError: Bool = false
-    
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -33,7 +35,7 @@ struct GenerateView: View {
                         .scaleEffect(1.5)
                         .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                 } else if showError || outfits.isEmpty {
-                    ErrorView(showError: $showError, fetchOutfits: fetchOutfits)
+                    ErrorView(showError: $showError, fetchOutfits: refetchOutfits)
                 } else {
                     VStack {
                         let selectedOutfit = outfits[currentIndex]
@@ -116,65 +118,6 @@ struct GenerateView: View {
                     swapItem(newItem: newItem)
                 })
             }
-            .onAppear {
-                fetchOutfits()
-            }
-        }
-    }
-    
-    func fetchOutfits() {
-        isLoading = true
-        showError = false
-
-        locationManager.requestLocation { location in
-            let lat = location.coordinate.latitude
-            let lon = location.coordinate.longitude
-
-            guard let url = URL(string: "\(urlStore.serverUrl)/recommendation/get?username=\(username)&lat=\(lat)&lon=\(lon)") else {
-                print("Invalid URL")
-                DispatchQueue.main.async {
-                    isLoading = false
-                    showError = true
-                }
-                return
-            }
-
-            URLSession.shared.dataTask(with: url) { data, response, error in
-                DispatchQueue.main.async {
-                    if let error = error {
-                        print("Error fetching outfits: \(error)")
-                        showError = true
-                        return
-                    }
-
-                    if let data = data {
-                        do {
-                            let decodedResponse = try JSONDecoder().decode([String: [Outfit]].self, from: data)
-                            if let fetchedOutfits = decodedResponse["outfits"], !fetchedOutfits.isEmpty {
-                                self.outfits = fetchedOutfits
-                                self.currentIndex = 0
-                                printOutfits(outfits: fetchedOutfits)
-
-                                isLoading = false
-                            } else {
-                                showError = true
-                            }
-                        } catch {
-                            print("Error decoding JSON: \(error)")
-                            showError = true
-                        }
-                    } else {
-                        showError = true
-                    }
-                }
-            }.resume()
-        }
-    }
-    
-    func printOutfits(outfits: [Outfit]) {
-        for (index, outfit) in outfits.enumerated() {
-            print("Outfit \(index + 1):")
-            print("  \(outfit.clothes.map { $0.img })")
         }
     }
 
