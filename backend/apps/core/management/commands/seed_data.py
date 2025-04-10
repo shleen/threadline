@@ -107,7 +107,7 @@ class Command(BaseCommand):
                     precip=precipitation,
                     occasion=occasion,
                     weather=weather,
-                    user=user
+                    user=user,
                     is_deleted = is_deleted
                 )
 
