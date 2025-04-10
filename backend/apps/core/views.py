@@ -330,9 +330,13 @@ def post_declutter(request):
     fields = json.loads(request.body.decode('utf-8'))
     try:
         ids = fields["ids"]
-        print(ids)
 
         # Todo: Implement soft delete given the list of ids
+        for cur_id in ids:
+            clothing_item = Clothing.objects.get(id=cur_id)
+            clothing_item.is_deleted = True;
+            clothing_item.save()
+
         return HttpResponse(status=200)
     except:
         return HttpResponseBadRequest(f"Required field 'ids' not provided. Please try again.\n")
