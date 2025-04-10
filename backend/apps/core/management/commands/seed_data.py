@@ -83,6 +83,7 @@ class Command(BaseCommand):
                 precipitation = random.choice(precips)
                 weather = random.choice(weathers)
                 layerable = bool(random.getrandbits(1))
+                is_deleted = False
 
                 # upload a random local image to r2
                 random_image_filename = self.get_random_image_filename_for_user(user)
@@ -107,6 +108,7 @@ class Command(BaseCommand):
                     occasion=occasion,
                     weather=weather,
                     user=user
+                    is_deleted = is_deleted
                 )
 
                 # attach some tags
