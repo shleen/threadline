@@ -14,6 +14,7 @@ import os
 import requests
 import tempfile
 import time
+import random
 
 
 def get_or_create_user(username):
@@ -117,7 +118,7 @@ def color_match(clothes,target_colors):
         if min_distance < best_distance:    
             best_distance = min_distance
             best_item = item
-            
+
     return best_item
 
 
@@ -127,24 +128,33 @@ def item_match(ranked):
     implementation is an MVP feature so for skeletal it is minimial
     and will just create up to 5 outfits of top, bottom, and shoes.
     """
-    if len(ranked.keys()) == 0:
-        return []
-
     outfits = []
-    while (len(ranked[Clothing.ClothingType.TOP]) > 0 and
-           len(ranked[Clothing.ClothingType.BOTTOM]) > 0 and
-           len(ranked[Clothing.ClothingType.SHOES]) > 0):
+    for i in range(5):
+        outfit = []
+        if (len(ranked[Clothing.ClothingType.DRESS]) > 0 and random.randint(0,1)):
+            dress = ranked[Clothing.ClothingType.DRESS].pop()
+            outfit.append({"id": dress["id"], "img": dress["img_filename"], "type": Clothing.ClothingType.DRESS})
+            target_colors = get_target_colors((dress["color_lstar"], dress["color_astar"], dress["color_bstar"]))
 
-        clothes = []
-        for k, queue in ranked.items():
-            if k == Clothing.ClothingType.DRESS or k == Clothing.ClothingType.OUTERWEAR:
-                continue
+            for k in ranked.keys():
+                if k not in [Clothing.ClothingType.DRESS, Clothing.ClothingType.TOP,Clothing.ClothingType.BOTTOM]:
+                    best_item = color_match(ranked[k], target_colors)
+                    outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
+                
+            outfits.append({"clothes": outfit})
 
-            garment = queue.pop()
-            clothes.append({"id": garment["id"], "img": garment["img_filename"], "type": k})
+        elif len(ranked[Clothing.ClothingType.TOP]) > 0:
+            top = ranked[Clothing.ClothingType.TOP].pop()
+            outfit.append({"id": top["id"], "img": top["img_filename"], "type": Clothing.ClothingType.TOP})
+            target_colors = get_target_colors((top["color_lstar"], top["color_astar"], top["color_bstar"]))
 
-        outfits.append({"clothes": clothes})
-
+            for k in ranked.keys():
+                if k not in [Clothing.ClothingType.DRESS, Clothing.ClothingType.TOP]:
+                    best_item = color_match(ranked[k], target_colors)
+                    outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
+                
+            outfits.append({"clothes": outfit})
+    
     return outfits
 
 
