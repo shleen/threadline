@@ -122,6 +122,8 @@ class Clothing(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
+    # Soft Delete for cluttering
+    is_deleted = models.BooleanField(default=False)
 
 class Tags(models.Model):
     label = models.CharField(blank=True)

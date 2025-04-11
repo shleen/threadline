@@ -69,7 +69,7 @@ def create_clothing(request):
     if os.path.isfile(filename) and os.path.getsize(image_path) > 10**6:
         return HttpResponseBadRequest("Provided 'image' is larger than the 10MB limit. Please try again.")
 
-    # TODO: Get color
+    # Get color
     try:
         red = int(fields["red"])
         green = int(fields["green"])
@@ -140,7 +140,7 @@ def get_closet(request):
 
     user = get_object_or_404(User, username=username)
     # Start with base query and evaluate it once
-    query = Clothing.objects.filter(user=user)
+    query = Clothing.objects.filter(user=user, is_deleted=False)
 
     type = request.GET.get('type')
     if type is not None:
@@ -330,9 +330,13 @@ def post_declutter(request):
     fields = json.loads(request.body.decode('utf-8'))
     try:
         ids = fields["ids"]
-        print(ids)
 
         # Todo: Implement soft delete given the list of ids
+        for cur_id in ids:
+            clothing_item = Clothing.objects.get(id=cur_id)
+            clothing_item.is_deleted = True;
+            clothing_item.save()
+
         return HttpResponse(status=200)
     except:
         return HttpResponseBadRequest(f"Required field 'ids' not provided. Please try again.\n")
