@@ -88,6 +88,38 @@ def get_target_colors(color):
 
     return [complement, analogous1, analogous2]
 
+def color_distance(color1, color2):
+    """
+    Calculate the Euclidean distance between two colors in CIELAB space.
+
+    Args:
+        color1: Tuple of (L*, a*, b*) values for the first color
+        color2: Tuple of (L*, a*, b*) values for the second color
+
+    Returns:
+        float: The distance between the two colors
+    """
+    return math.sqrt(sum((c1 - c2) ** 2 for c1, c2 in zip(color1, color2))) #each pair of colors, find the squared diff and sum them
+
+def color_match(clothes,target_colors):
+    """
+    Find the clothes that best matches the target colors
+    """ 
+    if not clothes:
+        return None
+
+    best_item = None
+    best_distance = float("inf")
+    for item in clothes:
+        item_color = (item["color_lstar"], item["color_astar"], item["color_bstar"])
+
+        min_distance = min(color_distance(item_color, target_color) for target_color in target_colors)
+        if min_distance < best_distance:    
+            best_distance = min_distance
+            best_item = item
+            
+    return best_item
+
 
 def item_match(ranked):
     """
