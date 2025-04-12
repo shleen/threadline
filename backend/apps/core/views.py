@@ -180,14 +180,17 @@ def get_closet(request):
 @require_method('POST')
 def log_outfit(request):
     try:
-        fields = json.loads(request.body.decode('utf-8'))
-        username = fields.get('username')
-        clothing_ids = fields.get('clothing_ids')
+        # Get username and clothing_ids from form data
+        username = request.POST.get('username')
+        clothing_ids_str = request.POST.get('clothing_ids')
 
         if username is None:
             return HttpResponseBadRequest("Required field 'username' not provided. Please try again.")
-        if clothing_ids is None:
+        if clothing_ids_str is None:
             return HttpResponseBadRequest("Required field 'clothing_ids' not provided. Please try again.")
+
+        # Convert clothing_ids string to list
+        clothing_ids = [int(id) for id in clothing_ids_str.split(',')]
 
         user = get_object_or_404(User, username=username)
 
@@ -197,10 +200,30 @@ def log_outfit(request):
             clothing_item = get_object_or_404(Clothing, id=clothing_id, user=user)
             clothing_items.append(clothing_item)
 
-        # Create outfit and save outfit items
+        # Create outfit
         outfit = Outfit(date_worn=timezone.now())
+
+        # Handle image upload if present
+        if 'image' in request.FILES:
+            image = request.FILES['image']
+
+            # Validate filetype
+            if image.content_type not in ['image/png', 'image/jpeg']:
+                return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png, jpeg). Please try again.")
+
+            filetype = image.content_type[6:]
+            filename = f"outfit/{username}_{round(time.time()*1000)}.{filetype}"
+
+            # Upload directly to R2
+            try:
+                r2.upload_fileobj(image, IMAGE_BUCKET, filename)
+                outfit.img_filename = filename
+            except Exception as e:
+                return HttpResponseBadRequest(f"Failed to upload image to R2: {str(e)}")
+
         outfit.save()
 
+        # Create outfit items
         for clothing_item in clothing_items:
             outfit_item = OutfitItem(clothing=clothing_item, outfit=outfit)
             outfit_item.save()
