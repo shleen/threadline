@@ -21,6 +21,10 @@ struct LogOutfitView: View {
     @Environment(UrlStore.self) private var urlStore
 
     @State var items: Array<LogOutfitItem>
+    @State private var image: UIImage?
+    @State private var isImagePickerPresented = false
+    @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
+    @State private var showingOptions = false
 
     @State private var gridColumns = Array(repeating: GridItem(.flexible()), count: 3)
     @State private var selectedItems: Set<Int> = []
@@ -34,15 +38,23 @@ struct LogOutfitView: View {
             return
         }
 
-        let payload: [String: Any] = [
-            "username": username,
-            "clothing_ids": Array(selectedItems)
-        ]
+        var multipart = MultipartRequest()
+        multipart.add(key: "username", value: username)
+        multipart.add(key: "clothing_ids", value: Array(selectedItems).map { String($0) }.joined(separator: ","))
+
+        if let imageData = image?.jpegData(compressionQuality: 0.8) {
+            multipart.add(
+                key: "image",
+                fileName: "image.jpg",
+                fileMimeType: "image/jpeg",
+                fileData: imageData
+            )
+        }
 
         var request = URLRequest(url: apiUrl)
-        request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
         request.httpMethod = "POST"
-        request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+        request.setValue(multipart.httpContentTypeHeadeValue, forHTTPHeaderField: "Content-Type")
+        request.httpBody = multipart.httpBody
 
         Task(priority: .background) {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -63,6 +75,34 @@ struct LogOutfitView: View {
                 Text("What are you wearing today?")
                     .font(.headline)
                     .padding(.bottom, 16)
+
+                Button(action: {
+                    showingOptions = true
+                }) {
+                    if let displayImage = image {
+                        Image(uiImage: displayImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 200)
+                            .padding()
+                    } else {
+                        VStack {
+                            Image(systemName: "photo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 60, height: 60)
+                                .foregroundColor(.gray)
+                            Text("Upload an OOTD photo!")
+                                .foregroundColor(.gray)
+                        }
+                        .frame(height: 200)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                }
+                .padding()
+
                 ScrollView {
                     LazyVGrid(columns: gridColumns) {
                         ForEach(items) { item in
@@ -71,6 +111,22 @@ struct LogOutfitView: View {
                     }
                 }
                 .padding(.horizontal, 16)
+            }
+            .sheet(isPresented: $isImagePickerPresented) {
+                ImagePickerCoordinator(image: $image, sourceType: sourceType) { _ in }
+            }
+            .confirmationDialog("Select Image", isPresented: $showingOptions) {
+                Button("Take Photo") {
+                    sourceType = .camera
+                    isImagePickerPresented = true
+                }
+                Button("Choose from Library") {
+                    sourceType = .photoLibrary
+                    isImagePickerPresented = true
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Upload a photo of your outfit.")
             }
             .toolbar {
                 Button(action: saveOutfit) {

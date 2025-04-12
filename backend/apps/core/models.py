@@ -135,7 +135,7 @@ class Tags(models.Model):
 
 class Outfit(models.Model):
     id = models.BigAutoField(primary_key=True, unique=True)
-
+    img_filename = models.URLField(blank=True, null=True)
     date_worn = models.DateTimeField(default=timezone.now)
 
 class OutfitItem(models.Model):
