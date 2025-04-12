@@ -363,3 +363,99 @@ def post_declutter(request):
         return HttpResponse(status=200)
     except:
         return HttpResponseBadRequest(f"Required field 'ids' not provided. Please try again.\n")
+
+@csrf_exempt
+@require_method('GET')
+def get_feed(request):
+    # Get pagination parameters
+    cursor = request.GET.get('cursor')
+    page_size = int(request.GET.get('page_size', 10))
+
+    # Base query starting from OutfitItem
+    outfit_items_query = OutfitItem.objects.select_related(
+        'outfit',
+        'clothing',
+        'clothing__user'
+    ).prefetch_related(
+        'clothing__tags_set'
+    ).filter(
+        outfit__img_filename__isnull=False
+    ).order_by('-outfit__date_worn')
+    
+    # Apply cursor if provided
+    if cursor:
+        try:
+            cursor_date = timezone.datetime.fromisoformat(cursor)
+            outfit_items_query = outfit_items_query.filter(outfit__date_worn__lt=cursor_date)
+        except ValueError:
+            return HttpResponseBadRequest("Invalid cursor format. Use ISO 8601 datetime format.")
+
+    # Get outfit items and group by outfit
+    outfit_items = outfit_items_query[:page_size * 10]  # Get enough items to fill page_size outfits
+
+    # Group by outfit and format response
+    feed_items = []
+    current_outfit = None
+    current_clothing_items = []
+
+    for item in outfit_items:
+        if current_outfit is None:
+            current_outfit = item.outfit
+            current_clothing_items = []
+
+        if item.outfit.id != current_outfit.id:
+            # Save previous outfit
+            feed_items.append({
+                'id': current_outfit.id,
+                'img_filename': current_outfit.img_filename,
+                'date_worn': current_outfit.date_worn.isoformat(),
+                'username': current_outfit.outfititem_set.first().clothing.user.username,
+                'clothing_items': current_clothing_items
+            })
+
+            # Start new outfit
+            current_outfit = item.outfit
+            current_clothing_items = []
+
+            # Check if we've reached page_size
+            if len(feed_items) >= page_size:
+                break
+
+        # Add clothing item with all fields
+        clothing = item.clothing
+        current_clothing_items.append({
+            'id': clothing.id,
+            'type': clothing.type,
+            'subtype': clothing.subtype,
+            'img_filename': clothing.img_filename,
+            'color_lstar': clothing.color_lstar,
+            'color_astar': clothing.color_astar,
+            'color_bstar': clothing.color_bstar,
+            'fit': clothing.fit,
+            'layerable': clothing.layerable,
+            'precip': clothing.precip,
+            'occasion': clothing.occasion,
+            'weather': clothing.weather,
+            'created_at': clothing.created_at.isoformat(),
+            'tags': [{'label': tag.label, 'value': tag.value} for tag in clothing.tags_set.all()]
+        })
+
+    # Add last outfit if exists
+    if current_outfit and len(feed_items) < page_size:
+        feed_items.append({
+            'id': current_outfit.id,
+            'img_filename': current_outfit.img_filename,
+            'date_worn': current_outfit.date_worn.isoformat(),
+            'username': current_outfit.outfititem_set.first().clothing.user.username,
+            'clothing_items': current_clothing_items
+        })
+
+    # Get next cursor from the last item
+    next_cursor = None
+    if len(outfit_items) >= page_size * 10:  # If we got the maximum number of items
+        next_cursor = feed_items[-1]['date_worn'] if feed_items else None
+
+    return JsonResponse({
+        'outfits': feed_items,
+        'next_cursor': next_cursor
+    })
