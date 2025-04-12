@@ -49,6 +49,7 @@ def utilization_query():
         JOIN core_user U
             ON C.user_id = U.id
         WHERE U.username = %s
+          AND C.is_deleted IS FALSE
     ),
     WORN_CLOTHES AS (
         SELECT U.id, U.type, U.img_filename, I.outfit_id
@@ -104,6 +105,7 @@ def rewears_query(context):
                 ON U.id = C.user_id
             WHERE O.date_worn >= date_trunc('day', NOW() - interval '1 month')
             AND U.username = %s
+            AND C.is_deleted IS FALSE
         ) W
         GROUP BY W.id, W.type, W.img_filename
             HAVING COUNT(*) > 1
@@ -144,7 +146,8 @@ def ranking_query(context):
     WITH 
     USER_CLOTHES AS (
         SELECT C.id, C.type, C.subtype, C.fit, C.occasion, C.img_filename,
-               C.color_lstar, C.color_astar, C.color_bstar, C.layerable, C.precip
+               C.color_lstar, C.color_astar, C.color_bstar, C.layerable, C.precip,
+               C.is_deleted
           FROM core_clothing C
           JOIN core_user U
             ON C.user_id = U.id
@@ -246,6 +249,7 @@ def ranking_query(context):
            AND O.type = U.type
      LEFT JOIN TIME_DEDUCTIONS T
             ON T.clothing_id = U.id
+         WHERE U.is_deleted IS FALSE
     ),
     SCORED AS (
         SELECT *, time_deduct * (subtype_weight + fit_weight + occasion_weight) + random() * 0.05 AS score
@@ -263,7 +267,7 @@ def ranking_query(context):
                 LIMIT 5)
                   UNION
               (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-                FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
+                FROM (SELECT * FROM USER_CLOTHES {precip_where} AND is_deleted IS FALSE) U
                 WHERE type = '{cl_type}'
                   AND precip = '{context["precip"]}' 
                 LIMIT 1)
@@ -295,6 +299,7 @@ def declutter_query():
           JOIN core_user U
             ON C.user_id = U.id
          WHERE U.username = %s
+           AND C.is_deleted IS FALSE
       ),
       WORN_CLOTHES AS (
         SELECT U.id, O.date_worn
