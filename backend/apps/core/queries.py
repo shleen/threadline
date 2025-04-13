@@ -325,6 +325,5 @@ def declutter_query():
          WHERE W.recent IS NULL
             OR W.recent < date_trunc('day', NOW() - interval '1 month')
       ORDER BY wear_counts
-         LIMIT 3
     """
 
