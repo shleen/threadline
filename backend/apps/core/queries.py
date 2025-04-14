@@ -294,7 +294,7 @@ def declutter_query():
     return """
       WITH 
       USER_CLOTHES AS (
-        SELECT C.id, C.img_filename
+        SELECT C.id, C.img_filename, C.created_at
           FROM core_clothing C
           JOIN core_user U
             ON C.user_id = U.id
@@ -322,8 +322,9 @@ def declutter_query():
           FROM USER_CLOTHES U
      LEFT JOIN WEAR_COUNTS W
             ON U.id = W.id
-         WHERE W.recent IS NULL
-            OR W.recent < date_trunc('day', NOW() - interval '1 month')
+         WHERE (W.recent IS NULL
+            OR W.recent < date_trunc('day', NOW() - interval '1 month'))
+           AND U.created_at < date_trunc('day', NOW() - interval '1 month')
       ORDER BY wear_counts
     """
 
