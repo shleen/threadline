@@ -136,7 +136,7 @@ struct HomeView: View {
                         .background(.bar)
                 }
             }
-            .background(Color(red: 0.956, green: 0.956, blue: 0.98))
+            .background(Color(red: 1.0, green: 0.992, blue: 0.91))
             .frame(maxHeight: .infinity)
             .navigationDestination(isPresented: $isPresentingLogOutfitView) {
                 LogOutfitView(isPresented: $isPresentingLogOutfitView, items: [])
