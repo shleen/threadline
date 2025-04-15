@@ -180,7 +180,7 @@ def pull_past_outfits(context):
         }
         for (outfit_id, timestamp),  group in groupby(
             records, lambda cloth: (cloth["outfit_id"], cloth["date_worn"]))
-    ], key=lambda outfit: outfit["timestamp"], reverse=True)
+    ], key=lambda outfit: outfit["timestamp"], reverse=True)[:15]
 
 
 
