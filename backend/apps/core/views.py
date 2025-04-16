@@ -56,7 +56,7 @@ def create_clothing(request):
         return HttpResponseBadRequest("Required field 'image' not provided. Please try again.")
 
     # Validate filetype
-    if image.content_type in ['image/png', 'image/jpeg']:
+    if image.content_type in ['image/png']:
         filetype = image.content_type[6:]
     else:
         return HttpResponseBadRequest("Provided 'image' is not of an acceptable image type (png, jpeg). Please try again.")
