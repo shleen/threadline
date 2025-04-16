@@ -77,10 +77,15 @@ def create_clothing(request):
         red_secondary = int(fields["red_secondary"])
         green_secondary = int(fields["green_secondary"])
         blue_secondary = int(fields["blue_secondary"])
-        if red < 0 or red_secondary < 0 or green < 0 or green_secondary < 0 or blue < 0 or blue_secondary < 0:
+        if not (0 <= red <= 255 and
+                0 <= red_secondary <= 255 and
+                0 <= green <= 255 and
+                0 <= green_secondary <=255 and
+                0 <= blue <= 255 and
+                0 <= blue_secondary <= 255):
             raise ValueError
     except ValueError:
-        return HttpResponseBadRequest("Error: the color fields (red, green, blue), must be a non-negative integer")
+        return HttpResponseBadRequest("Error: the color fields, must be a non-negative integer within the range of [0,255]")
 
     (lstar_primary, astar_primary, bstar_primary) = rgb_to_lab((red, green, blue))
     (lstar_secondary, astar_secondary, bstar_secondary) = rgb_to_lab((red_secondary, green_secondary, blue_secondary))
@@ -381,7 +386,7 @@ def get_feed(request):
     ).filter(
         outfit__img_filename__isnull=False
     ).order_by('-outfit__date_worn')
-    
+
     # Apply cursor if provided
     if cursor:
         try:
