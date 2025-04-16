@@ -70,7 +70,7 @@ struct LogOutfitView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+            Color.background.edgesIgnoringSafeArea(.all)
             VStack(spacing: 4) {
                 Text("What are you wearing today?")
                     .font(.headline)
