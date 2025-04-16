@@ -72,6 +72,7 @@ def utilization_query():
     (SELECT 'TOTAL' AS util_type,
         CASE
             WHEN (SELECT COUNT(*) FROM USER_CLOTHES) = 0 THEN 0.0
+            WHEN (SELECT COUNT(*) FROM DISTINCT_COUNTS) = 0 THEN 0.0
             ELSE ROUND(SUM(D.counts)::numeric / (SELECT COUNT(*) FROM USER_CLOTHES), 2)
         END AS percent
         FROM DISTINCT_COUNTS D)
