@@ -374,7 +374,7 @@ struct TagView: View {
             )
         }
 
-        guard let url = URL(string: "\(urlStore.serverUrl)/image/process/") else { return }
+        guard let url = URL(string: "\(urlStore.serverUrl)/image/process") else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(multipart.httpContentTypeHeadeValue, forHTTPHeaderField: "Content-Type")
