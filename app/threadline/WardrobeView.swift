@@ -31,7 +31,7 @@ struct WardrobeView: View {
                             AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img_filename)")) { image in
                                 image
                                     .resizable()
-                                    .aspectRatio(1, contentMode: .fill)
+                                    .aspectRatio(contentMode: .fit)
                                     .frame(width: 115, height: 115)
                                     .clipped()
                                     .cornerRadius(10)

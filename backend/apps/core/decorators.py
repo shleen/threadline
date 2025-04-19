@@ -1,3 +1,5 @@
+from django.http import HttpResponse
+
 def require_method(method):
     def decorator(func):
         def wrapper(request, *args, **kwargs):
