@@ -61,13 +61,6 @@ struct HomeView: View {
                     }
                     .tag(4)
             }
-
-            // Shadow effect at the top of the navbar
-            Rectangle()
-                .fill(Color.black.opacity(0.1))
-                .frame(height: 1)
-                .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: -3)
-                .offset(y: -49) // Adjust for tab bar height
         }
         .onAppear {
             // Eagerly request location to reduce latency in GenerateView

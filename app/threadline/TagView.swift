@@ -25,8 +25,10 @@ struct TagView: View {
     @State private var isImagePickerPresented = false
     @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
     @State private var showingOptions = false
-    @State private var primaryColor: Color = .gray
-    @State private var secondaryColor: Color = .gray
+    @State private var primaryColor: RGBColor = RGBColor(red: 128, green: 128, blue: 128)
+    @State private var secondaryColor: RGBColor = RGBColor(red: 128, green: 128, blue: 128)
+    @State private var isLoading = false
+    @State private var isProcessingImage = false
 
 
     let categories = ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]
@@ -54,6 +56,20 @@ struct TagView: View {
                                 .scaledToFit()
                                 .frame(height: 200)
                                 .padding()
+                                .overlay(alignment: .bottom) {
+                                    if isProcessingImage {
+                                        HStack {
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            Text("Removing background...")
+                                                .foregroundColor(.white)
+                                        }
+                                        .padding(4)
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.black.opacity(0.5))
+                                        .cornerRadius(8)
+                                    }
+                                }
                         } else {
                             VStack {
                                 Image(systemName: "photo")
@@ -74,7 +90,7 @@ struct TagView: View {
                     HStack(spacing: 20) {
                         HStack {
                             Rectangle()
-                                .fill(primaryColor)
+                                .fill(primaryColor.color)
                                 .frame(width: 30, height: 30)
                                 .cornerRadius(4)
                             Text("Primary")
@@ -83,7 +99,7 @@ struct TagView: View {
 
                         HStack {
                             Rectangle()
-                                .fill(secondaryColor)
+                                .fill(secondaryColor.color)
                                 .frame(width: 30, height: 30)
                                 .cornerRadius(4)
                             Text("Secondary")
@@ -196,17 +212,28 @@ struct TagView: View {
                     
                     Button(action: {
                         // Handle done action
+                        isLoading = true
                         createClothingItem()
                     }) {
-                        Text("Done")
-                            .padding(.horizontal)
-                            .padding(.vertical, 12)
-                            .background(isFormValid() ? Color.green : Color.gray)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
+                        if isLoading {
+                            ProgressView()
+                                .padding(.horizontal)
+                                .padding(.vertical, 12)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .background(Color.gray)
+                                .cornerRadius(8)
+                        }
+                        else {
+                            Text("Done")
+                                .padding(.horizontal)
+                                .padding(.vertical, 12)
+                                .background(isFormValid() ? Color.green : Color.gray)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
                     }
                     .padding()
-                    .disabled(!isFormValid())
+                    .disabled(!isFormValid() || isLoading)
                 }
                 .sheet(isPresented: $isImagePickerPresented) {
                     ImagePickerCoordinator(image: $image, sourceType: sourceType) { selectedImage in
@@ -269,7 +296,8 @@ struct TagView: View {
                selectedFit != nil &&
                selectedOccasion != nil &&
                winter != nil &&
-               image != nil
+               image != nil &&
+               !isProcessingImage
     }
 
     func createClothingItem() {
@@ -288,14 +316,21 @@ struct TagView: View {
             multipart.add(key: "precipitation", value: selectedPrecip)
         }
 
-        if let imageData = image?.jpegData(compressionQuality: 0.8) {
+        if let imageData = image?.pngData() {
             multipart.add(
                 key: "image",
-                fileName: "image.jpg",
-                fileMimeType: "image/jpeg",
+                fileName: "image.png",
+                fileMimeType: "image/png",
                 fileData: imageData
             )
         }
+
+        multipart.add(key: "red", value: String(primaryColor.red))
+        multipart.add(key: "green", value: String(primaryColor.green))
+        multipart.add(key: "blue", value: String(primaryColor.blue))
+        multipart.add(key: "red_secondary", value: String(secondaryColor.red))
+        multipart.add(key: "green_secondary", value: String(secondaryColor.green))
+        multipart.add(key: "blue_secondary", value: String(secondaryColor.blue))
 
         /// Create a regular HTTP URL request & use multipart components
         guard let url = URL(string: "\(urlStore.serverUrl)/clothing/create") else { return }
@@ -317,62 +352,43 @@ struct TagView: View {
             DispatchQueue.main.async {
                 if httpResponse.statusCode == 200 {
                     showSuccessSnackbar = true
+                    clearForm()
                     // Wait for snackbar animation before navigating
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         navigateToWardrobe = true
                         showSuccessSnackbar = false
                     }
                 }
+                isLoading = false
             }
         }.resume()
     }
 
-//    func removeBackground(from image: UIImage) {
-//        var multipart = MultipartRequest()
-//        multipart.add(key: "username", value: username)
-//        multipart.add(
-//            key: "image",
-//            fileName: "image.png",
-//            fileMimeType: "image/png",
-//            fileData: image.pngData()!
-//        )
-//
-//        guard let url = URL(string: "\(urlStore.serverUrl)/background/remove") else { return }
-//        var request = URLRequest(url: url)
-//        request.httpMethod = "POST"
-//        request.setValue(multipart.httpContentTypeHeadeValue, forHTTPHeaderField: "Content-Type")
-//        request.httpBody = multipart.httpBody
-//
-//        // Process in background without blocking UI
-//        DispatchQueue.global(qos: .userInitiated).async {
-//            URLSession.shared.dataTask(with: request) { data, response, error in
-//                if let error = error {
-//                    print("Background removal error: \(error)")
-//                    return
-//                }
-//
-//                guard let data = data,
-//                      let processedImage = UIImage(data: data) else { return }
-//
-//                DispatchQueue.main.async {
-//                    self.image = processedImage
-//                }
-//            }.resume()
-//        }
-//    }
-    
+    func clearForm() {
+        image = nil
+        tags = []
+        newTag = ""
+        selectedCategory = nil
+        selectedSubtype = nil
+        selectedFit = nil
+        selectedOccasion = nil
+        selectedPrecip = nil
+        winter = nil
+        primaryColor = RGBColor(red: 128, green: 128, blue: 128)
+        secondaryColor = RGBColor(red: 128, green: 128, blue: 128)
+    }
+
     func processImageForColors(_ image: UIImage) {
+        isProcessingImage = true
         var multipart = MultipartRequest()
         multipart.add(key: "username", value: username)
 
-        if let imageData = image.pngData() {
-            multipart.add(
-                key: "image",
-                fileName: "clothing.png",
-                fileMimeType: "image/png",
-                fileData: imageData
-            )
-        }
+        multipart.add(
+            key: "image",
+            fileName: "clothing.png",
+            fileMimeType: "image/png",
+            fileData: image.pngData()!
+        )
 
         guard let url = URL(string: "\(urlStore.serverUrl)/image/process") else { return }
         var request = URLRequest(url: url)
@@ -380,6 +396,7 @@ struct TagView: View {
         request.setValue(multipart.httpContentTypeHeadeValue, forHTTPHeaderField: "Content-Type")
         request.httpBody = multipart.httpBody
 
+        // Process in background without blocking UI
         DispatchQueue.global(qos: .userInitiated).async {
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
@@ -405,37 +422,25 @@ struct TagView: View {
 
                             // Set primary color
                             if let rgb1 = colors.first, rgb1.count == 3 {
-                                self.primaryColor = Color(
-                                    red: Double(rgb1[0]) / 255,
-                                    green: Double(rgb1[1]) / 255,
-                                    blue: Double(rgb1[2]) / 255
-                                )
+                                self.primaryColor = RGBColor(red: rgb1[0], green: rgb1[1], blue: rgb1[2])
                             }
 
                             // Set secondary color
                             if let rgb2 = colors.dropFirst().first, rgb2.count == 3 {
-                                self.secondaryColor = Color(
-                                    red: Double(rgb2[0]) / 255,
-                                    green: Double(rgb2[1]) / 255,
-                                    blue: Double(rgb2[2]) / 255
-                                )
+                                self.secondaryColor = RGBColor(red: rgb2[0], green: rgb2[1], blue: rgb2[2])
                             }
 
                             print("Primary color: \(colors.first ?? [])")
                             print("Secondary color: \(colors.dropFirst().first ?? [])")
+                            isProcessingImage = false
                         }
                     }
                 } catch {
                     print("Failed to decode response: \(error)")
+                    isProcessingImage = false
                 }
             }.resume()
         }
-    }
-}
-
-struct TagView_Previews: PreviewProvider {
-    static var previews: some View {
-        TagView()
     }
 }
 

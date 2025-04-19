@@ -102,7 +102,7 @@ def color_distance(color1, color2):
     """
     return math.sqrt(sum((c1 - c2) ** 2 for c1, c2 in zip(color1, color2))) #each pair of colors, find the squared diff and sum them
 
-def color_match(clothes,target_colors):
+def color_match(clothes, target_colors):
     """
     Find the clothes that best matches the target colors
     """ 
@@ -139,7 +139,8 @@ def item_match(ranked):
             for k in ranked.keys():
                 if k not in [Clothing.ClothingType.DRESS, Clothing.ClothingType.TOP,Clothing.ClothingType.BOTTOM]:
                     best_item = color_match(ranked[k], target_colors)
-                    outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})                
+                    if best_item:
+                        outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
 
         elif len(ranked[Clothing.ClothingType.TOP]) > 0:
             top = ranked[Clothing.ClothingType.TOP].pop()
@@ -149,8 +150,9 @@ def item_match(ranked):
             for k in ranked.keys():
                 if k not in [Clothing.ClothingType.DRESS, Clothing.ClothingType.TOP]:
                     best_item = color_match(ranked[k], target_colors)
-                    outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})                
-
+                    if best_item:
+                        outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
+                          
         # Get weather from first garment (they should all have same weather)
         base_weather = get_base_weather(ranked)
         
@@ -159,7 +161,7 @@ def item_match(ranked):
 
         if base_weather and base_weather in Clothing.Weather.WINTER:
             add_outerwear(ranked, outfit)
-
+        
         outfits.append({"clothes": outfit})
     
     return outfits

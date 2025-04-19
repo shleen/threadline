@@ -414,6 +414,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = threadline/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "To take photos of your clothing.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to generate personalized recommendations for you.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -447,6 +448,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = threadline/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "To take photos of your clothing.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to generate personalized recommendations for you.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
