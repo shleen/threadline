@@ -1,4 +1,5 @@
 import math
+from .models import Clothing
 
 def lab_to_hcl(l, a, b):
     """Convert CIELAB color to HCL (Hue, Chroma, Luminance)"""
@@ -83,3 +84,26 @@ def lab_to_rgb(lab):
         rgb[i] = max(0, min(255, round(rgb[i])))
 
     return tuple(rgb)
+
+def pop_base_garments(ranked):
+    clothes = []
+    for clothing_type in [Clothing.ClothingType.TOP, Clothing.ClothingType.BOTTOM, Clothing.ClothingType.SHOES]:
+        garment = ranked[clothing_type].pop()
+        clothes.append({"id": garment["id"], "img": garment["img_filename"], "type": clothing_type})
+    return clothes
+
+def get_base_weather(ranked):
+    if ranked[Clothing.ClothingType.TOP]:
+        return ranked[Clothing.ClothingType.TOP][0].get("weather")
+    return None
+
+def add_layerable_top(ranked, clothes):
+    layerable_tops = [g for g in ranked[Clothing.ClothingType.TOP] if g.get("layerable", False)]
+    if layerable_tops:
+        layer = layerable_tops.pop()
+        clothes.append({"id": layer["id"], "img": layer["img_filename"], "type": Clothing.ClothingType.TOP})
+
+def add_outerwear(ranked, clothes):
+    if ranked[Clothing.ClothingType.OUTERWEAR]:
+        outerwear = ranked[Clothing.ClothingType.OUTERWEAR].pop()
+        clothes.append({"id": outerwear["id"], "img": outerwear["img_filename"], "type": Clothing.ClothingType.OUTERWEAR})

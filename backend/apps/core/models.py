@@ -64,7 +64,9 @@ class Clothing(models.Model):
 
     class Weather(models.TextChoices):
         WINTER = "WINTER"
+        SPRING = "SPRING"
         SUMMER = "SUMMER"
+        FALL = "FALL"
 
     def validate_subtype(value):
         # if no subtype is provided, skip validation (assuming field is optional)
