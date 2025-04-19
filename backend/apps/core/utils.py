@@ -101,9 +101,17 @@ def add_layerable_top(ranked, clothes):
     layerable_tops = [g for g in ranked[Clothing.ClothingType.TOP] if g.get("layerable", False)]
     if layerable_tops:
         layer = layerable_tops.pop()
-        clothes.append({"id": layer["id"], "img": layer["img_filename"], "type": Clothing.ClothingType.TOP})
+        clothes.append({
+            "id": layer["id"],
+            "img": layer["img_filename"],
+            "type": Clothing.ClothingType.TOP
+        })
 
 def add_outerwear(ranked, clothes):
     if ranked[Clothing.ClothingType.OUTERWEAR]:
         outerwear = ranked[Clothing.ClothingType.OUTERWEAR].pop()
-        clothes.append({"id": outerwear["id"], "img": outerwear["img_filename"], "type": Clothing.ClothingType.OUTERWEAR})
+        clothes.append({
+            "id": outerwear["id"],
+            "img": outerwear["img_filename"],
+            "type": Clothing.ClothingType.OUTERWEAR
+        })

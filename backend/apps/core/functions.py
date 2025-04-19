@@ -154,10 +154,10 @@ def item_match(ranked):
         # Get weather from first garment (they should all have same weather)
         base_weather = get_base_weather(ranked)
         
-        if base_weather in [Clothing.Weather.WINTER, Clothing.Weather.SPRING, Clothing.Weather.FALL]:
+        if base_weather and base_weather in [Clothing.Weather.WINTER, Clothing.Weather.SPRING, Clothing.Weather.FALL]:
             add_layerable_top(ranked, outfit)
 
-        if base_weather in Clothing.Weather.WINTER:
+        if base_weather and base_weather in Clothing.Weather.WINTER:
             add_outerwear(ranked, outfit)
 
         outfits.append({"clothes": outfit})
