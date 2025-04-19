@@ -25,10 +25,12 @@ struct DeclutterView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     
+    let screen_limit = 3
+    
     var body: some View {
         NavigationView {
             ZStack {
-                Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+                Color.background.edgesIgnoringSafeArea(.all)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         if isLoading {
@@ -56,7 +58,8 @@ struct DeclutterView: View {
                                             .shadow(color: Color.gray.opacity(0.85), radius: 20, x: 0, y: 5)
                                     }
                                     else {
-                                        ForEach(declutter.declutter, id: \.id) { decl in
+                                        let declutter_items = Array(declutter.declutter.prefix(screen_limit));
+                                        ForEach(declutter_items, id: \.id) { decl in
                                             HStack(spacing: 12) {
                                                 AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(decl.img_filename)")) { image in
                                                     image
@@ -81,7 +84,7 @@ struct DeclutterView: View {
                                                 
                                                 
                                                 Button(action: {
-                                                    Task { await deleteGarm([decl.id]) }
+                                                    deleteGarm([decl.id])
                                                 }) {
                                                     Image(systemName: "trash")
                                                         .imageScale(.large)
@@ -90,7 +93,8 @@ struct DeclutterView: View {
                                             }
                                         }
                                         Button(action: {
-                                            Task { await deleteGarm(declutter.declutter.map {$0.id}) }
+                                            let declutter_items = Array(declutter.declutter.prefix(screen_limit));
+                                            deleteGarm(declutter_items.map {$0.id})
                                         }) {
                                             Text("Remove All")
                                                 .font(.headline)
@@ -124,20 +128,13 @@ struct DeclutterView: View {
         }
     }
     
-    private func deleteGarm(_ ids: [Int]) async {
+    private func deleteGarm(_ ids: [Int]) {
         // Remove the rows from the UI
         declutter?.declutter.removeAll(where: { ids.contains($0.id) })
         
         // POST to backend for a soft delete
-        await postDeclutter(ids, urlStore.serverUrl)
-        
-        // If the UI has been cleared refresh it with new recommendations
-        if let decl = declutter {
-            if decl.declutter.isEmpty {
-                Task {
-                    await fetchDeclutter()
-                }
-            }
+        Task {
+            await postDeclutter(ids, urlStore.serverUrl)
         }
     }
     

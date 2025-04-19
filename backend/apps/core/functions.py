@@ -14,6 +14,7 @@ import os
 import requests
 import tempfile
 import time
+import random
 
 
 def get_or_create_user(username):
@@ -88,6 +89,38 @@ def get_target_colors(color):
 
     return [complement, analogous1, analogous2]
 
+def color_distance(color1, color2):
+    """
+    Calculate the Euclidean distance between two colors in CIELAB space.
+
+    Args:
+        color1: Tuple of (L*, a*, b*) values for the first color
+        color2: Tuple of (L*, a*, b*) values for the second color
+
+    Returns:
+        float: The distance between the two colors
+    """
+    return math.sqrt(sum((c1 - c2) ** 2 for c1, c2 in zip(color1, color2))) #each pair of colors, find the squared diff and sum them
+
+def color_match(clothes,target_colors):
+    """
+    Find the clothes that best matches the target colors
+    """ 
+    if not clothes:
+        return None
+
+    best_item = None
+    best_distance = float("inf")
+    for item in clothes:
+        item_color = (item["color_lstar"], item["color_astar"], item["color_bstar"])
+
+        min_distance = min(color_distance(item_color, target_color) for target_color in target_colors)
+        if min_distance < best_distance:    
+            best_distance = min_distance
+            best_item = item
+
+    return best_item
+
 
 def item_match(ranked):
     """
@@ -95,28 +128,40 @@ def item_match(ranked):
     implementation is an MVP feature so for skeletal it is minimial
     and will just create up to 5 outfits of top, bottom, and shoes.
     """
-    if len(ranked.keys()) == 0:
-        return []
-
     outfits = []
-    while (len(ranked[Clothing.ClothingType.TOP]) > 0 and
-           len(ranked[Clothing.ClothingType.BOTTOM]) > 0 and
-           len(ranked[Clothing.ClothingType.SHOES]) > 0):
+    for i in range(5):
+        outfit = []
+        if (len(ranked[Clothing.ClothingType.DRESS]) > 0 and random.randint(0,1)):
+            dress = ranked[Clothing.ClothingType.DRESS].pop()
+            outfit.append({"id": dress["id"], "img": dress["img_filename"], "type": Clothing.ClothingType.DRESS})
+            target_colors = get_target_colors((dress["color_lstar"], dress["color_astar"], dress["color_bstar"]))
 
-        # Add base garments (top, bottom, shoes)
-        clothes = pop_base_garments(ranked)
+            for k in ranked.keys():
+                if k not in [Clothing.ClothingType.DRESS, Clothing.ClothingType.TOP,Clothing.ClothingType.BOTTOM]:
+                    best_item = color_match(ranked[k], target_colors)
+                    outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})                
+
+        elif len(ranked[Clothing.ClothingType.TOP]) > 0:
+            top = ranked[Clothing.ClothingType.TOP].pop()
+            outfit.append({"id": top["id"], "img": top["img_filename"], "type": Clothing.ClothingType.TOP})
+            target_colors = get_target_colors((top["color_lstar"], top["color_astar"], top["color_bstar"]))
+
+            for k in ranked.keys():
+                if k not in [Clothing.ClothingType.DRESS, Clothing.ClothingType.TOP]:
+                    best_item = color_match(ranked[k], target_colors)
+                    outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})                
 
         # Get weather from first garment (they should all have same weather)
         base_weather = get_base_weather(ranked)
         
         if base_weather in [Clothing.Weather.WINTER, Clothing.Weather.SPRING, Clothing.Weather.FALL]:
-            add_layerable_top(ranked, clothes)
+            add_layerable_top(ranked, outfit)
 
         if base_weather in Clothing.Weather.WINTER:
-            add_outerwear(ranked, clothes)
+            add_outerwear(ranked, outfit)
 
-        outfits.append({"clothes": clothes})
-
+        outfits.append({"clothes": outfit})
+    
     return outfits
 
 
@@ -142,7 +187,7 @@ def pull_past_outfits(context):
         }
         for (outfit_id, timestamp),  group in groupby(
             records, lambda cloth: (cloth["outfit_id"], cloth["date_worn"]))
-    ], key=lambda outfit: outfit["timestamp"], reverse=True)
+    ], key=lambda outfit: outfit["timestamp"], reverse=True)[:15]
 
 
 

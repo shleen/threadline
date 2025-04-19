@@ -28,5 +28,6 @@ urlpatterns = [
     path('image/process', views.process_image),
     path('categories/get', views.get_categories),
     path('declutter/get', views.get_declutter),
-    path('declutter/post', views.post_declutter)
+    path('declutter/post', views.post_declutter),
+    path('feed/get', views.get_feed)
 ]

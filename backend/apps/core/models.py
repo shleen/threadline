@@ -124,6 +124,8 @@ class Clothing(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
+    # Soft Delete for cluttering
+    is_deleted = models.BooleanField(default=False)
 
 class Tags(models.Model):
     label = models.CharField(blank=True)
@@ -135,7 +137,7 @@ class Tags(models.Model):
 
 class Outfit(models.Model):
     id = models.BigAutoField(primary_key=True, unique=True)
-
+    img_filename = models.URLField(blank=True, null=True)
     date_worn = models.DateTimeField(default=timezone.now)
 
 class OutfitItem(models.Model):

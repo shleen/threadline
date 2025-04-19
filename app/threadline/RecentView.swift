@@ -28,7 +28,7 @@ struct RecentView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+                Color.background.edgesIgnoringSafeArea(.all)
                 ScrollView {
                     VStack(spacing: 20) {
                         ForEach(outfits, id: \.outfit_id) { outfit in

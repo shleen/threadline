@@ -28,7 +28,7 @@ struct SetupView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+            Color.background.edgesIgnoringSafeArea(.all)
             HStack() {
                 VStack(spacing: 10) {
                     Text("Hello! Welcome to threadline.")

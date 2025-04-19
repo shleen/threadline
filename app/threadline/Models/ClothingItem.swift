@@ -12,9 +12,6 @@ struct Clothing: Codable, Identifiable {
     let type: String
     let subtype: String?
     let img_filename: String
-    let color_lstar: Double
-    let color_astar: Double
-    let color_bstar: Double
     let fit: String
     let layerable: Bool
     let precip: String?
@@ -22,6 +19,8 @@ struct Clothing: Codable, Identifiable {
     let weather: String
     let created_at: String
     let tags: [Tag]
+    let colors_primary: [Int]
+    let colors_secondary: [Int]
     
 }
 struct Tag: Codable, Identifiable {

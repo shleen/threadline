@@ -43,7 +43,7 @@ struct AnalyticsView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+                Color.background.edgesIgnoringSafeArea(.all)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         if isLoading {

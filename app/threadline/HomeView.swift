@@ -19,6 +19,10 @@ struct HomeView: View {
     @State private var isPresentingWardrobeView: Bool = false
     @State private var selectedTab: Int = 0
 
+    private func logout() {
+        username = ""
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView(selection: $selectedTab) {
@@ -28,6 +32,7 @@ struct HomeView: View {
                         Text("Home")
                     }
                     .tag(0)
+
                 TagView()
                     .tabItem {
                         Image(systemName: "photo.badge.plus.fill")
@@ -56,7 +61,7 @@ struct HomeView: View {
                     }
                     .tag(4)
             }
-            
+
             // Shadow effect at the top of the navbar
             Rectangle()
                 .fill(Color.black.opacity(0.1))
@@ -72,51 +77,66 @@ struct HomeView: View {
 
     var mainContent: some View {
         ZStack {
-            VStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    VStack(alignment: .leading) {
-                        Text("Looking good, \(username)")
-                            .font(.system(size: 18, weight: .medium))
-                            .padding(.top, 40)
-                        Text("Tell us what you're wearing - we'll use it to show you stats and recommend new outfits.")
-                            .font(.system(size: 14, weight: .light))
-                            .padding(.bottom, 6)
-                            .padding(.top, 1)
-                        Button(action: { isPresentingLogOutfitView.toggle() }) {
-                            Text("Log an outfit")
-                                .font(.system(size: 18, weight: .regular))
-                                // Note that call to .frame must come before the call to .buttonStyle for the
-                                // button to actually fill the entire width of the screen
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
+            ScrollView {
+                VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                HStack(alignment: .center) {
+                                    Text("Looking good, \(username)")
+                                        .font(.system(size: 18, weight: .medium))
 
-                    HomeInspirationView(outfits: $outfits, currentIndex: $currentIndex)
-                        .padding(.top, 8)
+                                    Spacer()
 
-                    VStack {
-                        Button(action: { isPresentingWardrobeView.toggle() }) {
-                            Text("Browse your wardrobe")
-                                .font(.system(size: 18, weight: .regular))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
+                                    Button(action: logout) {
+                                        Text("Logout")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.red)
+                                    }
+                                }
+                                .padding(.top, 40)
+                                .padding(.bottom, 2)
+
+                                Text("Tell us what you're wearing - we'll use it to show you stats and recommend new outfits.")
+                                    .font(.system(size: 14, weight: .light))
+                                    .padding(.bottom, 6)
+                                Button(action: { isPresentingLogOutfitView.toggle() }) {
+                                    Text("Log an outfit")
+                                        .font(.system(size: 18, weight: .regular))
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
                         }
-                        .buttonStyle(.borderedProminent)
-                        .padding(.vertical, 15)
+
+                        HomeInspirationView(outfits: $outfits, currentIndex: $currentIndex)
+                            .padding(.top, 8)
+
+                        VStack {
+                            Button(action: { isPresentingWardrobeView.toggle() }) {
+                                Text("Browse your wardrobe")
+                                    .font(.system(size: 18, weight: .regular))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .padding(.vertical, 15)
+                        }
                     }
+                    .padding(.horizontal, 16)
+
+                    // Shows recently worn outfits from other users
+                    FeedView()
+
+                    // Prevents background color from bleeding into the tab bar
+                    Spacer()
+                    Rectangle()
+                        .frame(height: 0)
+                        .background(.bar)
                 }
-                .padding(.horizontal, 16)
-                
-
-                // Prevents background color from bleeding into the tab bar
-                Spacer()
-                Rectangle()
-                    .frame(height: 0)
-                    .background(.bar)
             }
-            .background(Color(red: 0.956, green: 0.956, blue: 0.98))
+            .background(Color.background)
             .frame(maxHeight: .infinity)
             .navigationDestination(isPresented: $isPresentingLogOutfitView) {
                 LogOutfitView(isPresented: $isPresentingLogOutfitView, items: [])

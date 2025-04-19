@@ -49,6 +49,7 @@ def utilization_query():
         JOIN core_user U
             ON C.user_id = U.id
         WHERE U.username = %s
+          AND C.is_deleted IS FALSE
     ),
     WORN_CLOTHES AS (
         SELECT U.id, U.type, U.img_filename, I.outfit_id
@@ -71,6 +72,7 @@ def utilization_query():
     (SELECT 'TOTAL' AS util_type,
         CASE
             WHEN (SELECT COUNT(*) FROM USER_CLOTHES) = 0 THEN 0.0
+            WHEN (SELECT COUNT(*) FROM DISTINCT_COUNTS) = 0 THEN 0.0
             ELSE ROUND(SUM(D.counts)::numeric / (SELECT COUNT(*) FROM USER_CLOTHES), 2)
         END AS percent
         FROM DISTINCT_COUNTS D)
@@ -104,6 +106,7 @@ def rewears_query(context):
                 ON U.id = C.user_id
             WHERE O.date_worn >= date_trunc('day', NOW() - interval '1 month')
             AND U.username = %s
+            AND C.is_deleted IS FALSE
         ) W
         GROUP BY W.id, W.type, W.img_filename
             HAVING COUNT(*) > 1
@@ -144,7 +147,8 @@ def ranking_query(context):
     WITH 
     USER_CLOTHES AS (
         SELECT C.id, C.type, C.subtype, C.fit, C.occasion, C.img_filename,
-               C.color_lstar, C.color_astar, C.color_bstar, C.layerable, C.precip
+               C.color_lstar, C.color_astar, C.color_bstar, C.layerable, C.precip,
+               C.is_deleted
           FROM core_clothing C
           JOIN core_user U
             ON C.user_id = U.id
@@ -246,6 +250,7 @@ def ranking_query(context):
            AND O.type = U.type
      LEFT JOIN TIME_DEDUCTIONS T
             ON T.clothing_id = U.id
+         WHERE U.is_deleted IS FALSE
     ),
     SCORED AS (
         SELECT *, time_deduct * (subtype_weight + fit_weight + occasion_weight) + random() * 0.05 AS score
@@ -263,7 +268,7 @@ def ranking_query(context):
                 LIMIT 5)
                   UNION
               (SELECT id, type, img_filename, subtype, color_lstar, color_astar, color_bstar, fit, layerable, precip
-                FROM (SELECT * FROM USER_CLOTHES {precip_where}) U
+                FROM (SELECT * FROM USER_CLOTHES {precip_where} AND is_deleted IS FALSE) U
                 WHERE type = '{cl_type}'
                   AND precip = '{context["precip"]}' 
                 LIMIT 1)
@@ -290,11 +295,12 @@ def declutter_query():
     return """
       WITH 
       USER_CLOTHES AS (
-        SELECT C.id, C.img_filename
+        SELECT C.id, C.img_filename, C.created_at
           FROM core_clothing C
           JOIN core_user U
             ON C.user_id = U.id
          WHERE U.username = %s
+           AND C.is_deleted IS FALSE
       ),
       WORN_CLOTHES AS (
         SELECT U.id, O.date_worn
@@ -317,9 +323,9 @@ def declutter_query():
           FROM USER_CLOTHES U
      LEFT JOIN WEAR_COUNTS W
             ON U.id = W.id
-         WHERE W.recent IS NULL
-            OR W.recent < date_trunc('day', NOW() - interval '1 month')
+         WHERE (W.recent IS NULL
+            OR W.recent < date_trunc('day', NOW() - interval '1 month'))
+           AND U.created_at < date_trunc('day', NOW() - interval '1 month')
       ORDER BY wear_counts
-         LIMIT 3
     """
 

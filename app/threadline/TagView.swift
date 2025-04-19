@@ -25,6 +25,9 @@ struct TagView: View {
     @State private var isImagePickerPresented = false
     @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
     @State private var showingOptions = false
+    @State private var primaryColor: Color = .gray
+    @State private var secondaryColor: Color = .gray
+
 
     let categories = ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]
     let topSubtypes = ["ACTIVE", "T-SHIRT", "POLO", "BUTTON DOWN", "HOODIE", "SWEATER"]
@@ -39,7 +42,7 @@ struct TagView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 1.0, green: 0.992, blue: 0.91).edgesIgnoringSafeArea(.all)
+            Color.background.edgesIgnoringSafeArea(.all)
             ScrollView {
                 VStack {
                     Button(action: {
@@ -67,6 +70,27 @@ struct TagView: View {
                             .cornerRadius(8)
                         }
                     }.padding()
+                    
+                    HStack(spacing: 20) {
+                        HStack {
+                            Rectangle()
+                                .fill(primaryColor)
+                                .frame(width: 30, height: 30)
+                                .cornerRadius(4)
+                            Text("Primary")
+                                .font(.caption)
+                        }
+
+                        HStack {
+                            Rectangle()
+                                .fill(secondaryColor)
+                                .frame(width: 30, height: 30)
+                                .cornerRadius(4)
+                            Text("Secondary")
+                                .font(.caption)
+                        }
+                    }
+                    .padding(.bottom, 10)
                     
                     HStack {
                         TextField("Enter tag", text: $newTag)
@@ -186,8 +210,8 @@ struct TagView: View {
                 }
                 .sheet(isPresented: $isImagePickerPresented) {
                     ImagePickerCoordinator(image: $image, sourceType: sourceType) { selectedImage in
-                        // After an image is selected, remove the background
-                        removeBackground(from: selectedImage)
+                        self.image = selectedImage // <- optional if you want to show unprocessed image briefly
+                        processImageForColors(selectedImage)
                     }
                 }
                 .confirmationDialog("Select Image", isPresented: $showingOptions) {
@@ -303,35 +327,106 @@ struct TagView: View {
         }.resume()
     }
 
-    func removeBackground(from image: UIImage) {
+//    func removeBackground(from image: UIImage) {
+//        var multipart = MultipartRequest()
+//        multipart.add(key: "username", value: username)
+//        multipart.add(
+//            key: "image",
+//            fileName: "image.png",
+//            fileMimeType: "image/png",
+//            fileData: image.pngData()!
+//        )
+//
+//        guard let url = URL(string: "\(urlStore.serverUrl)/background/remove") else { return }
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.setValue(multipart.httpContentTypeHeadeValue, forHTTPHeaderField: "Content-Type")
+//        request.httpBody = multipart.httpBody
+//
+//        // Process in background without blocking UI
+//        DispatchQueue.global(qos: .userInitiated).async {
+//            URLSession.shared.dataTask(with: request) { data, response, error in
+//                if let error = error {
+//                    print("Background removal error: \(error)")
+//                    return
+//                }
+//
+//                guard let data = data,
+//                      let processedImage = UIImage(data: data) else { return }
+//
+//                DispatchQueue.main.async {
+//                    self.image = processedImage
+//                }
+//            }.resume()
+//        }
+//    }
+    
+    func processImageForColors(_ image: UIImage) {
         var multipart = MultipartRequest()
         multipart.add(key: "username", value: username)
-        multipart.add(
-            key: "image",
-            fileName: "image.png",
-            fileMimeType: "image/png",
-            fileData: image.pngData()!
-        )
 
-        guard let url = URL(string: "\(urlStore.serverUrl)/background/remove") else { return }
+        if let imageData = image.pngData() {
+            multipart.add(
+                key: "image",
+                fileName: "clothing.png",
+                fileMimeType: "image/png",
+                fileData: imageData
+            )
+        }
+
+        guard let url = URL(string: "\(urlStore.serverUrl)/image/process") else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(multipart.httpContentTypeHeadeValue, forHTTPHeaderField: "Content-Type")
         request.httpBody = multipart.httpBody
 
-        // Process in background without blocking UI
         DispatchQueue.global(qos: .userInitiated).async {
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("Background removal error: \(error)")
+                    print("Image process error: \(error)")
                     return
                 }
 
-                guard let data = data,
-                      let processedImage = UIImage(data: data) else { return }
+                guard let data = data else { return }
+                
+                print("Raw response: \(String(data: data, encoding: .utf8) ?? "N/A")")
 
-                DispatchQueue.main.async {
-                    self.image = processedImage
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let colorArrayString = json["colors"] as? String,
+                       let colorData = colorArrayString.data(using: .utf8),
+                       let colors = try? JSONDecoder().decode([[Int]].self, from: colorData),
+                       let base64String = json["image_base64"] as? String,
+                       let processedImageData = Data(base64Encoded: base64String),
+                       let processedImage = UIImage(data: processedImageData) {
+
+                        DispatchQueue.main.async {
+                            self.image = processedImage
+
+                            // Set primary color
+                            if let rgb1 = colors.first, rgb1.count == 3 {
+                                self.primaryColor = Color(
+                                    red: Double(rgb1[0]) / 255,
+                                    green: Double(rgb1[1]) / 255,
+                                    blue: Double(rgb1[2]) / 255
+                                )
+                            }
+
+                            // Set secondary color
+                            if let rgb2 = colors.dropFirst().first, rgb2.count == 3 {
+                                self.secondaryColor = Color(
+                                    red: Double(rgb2[0]) / 255,
+                                    green: Double(rgb2[1]) / 255,
+                                    blue: Double(rgb2[2]) / 255
+                                )
+                            }
+
+                            print("Primary color: \(colors.first ?? [])")
+                            print("Secondary color: \(colors.dropFirst().first ?? [])")
+                        }
+                    }
+                } catch {
+                    print("Failed to decode response: \(error)")
                 }
             }.resume()
         }
