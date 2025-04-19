@@ -24,6 +24,8 @@ struct GenerateView: View {
     @State private var categoryToSwap: String?
     @State private var isLoading: Bool = false
     @State private var showError: Bool = false
+    @State private var showCategoryPicker: Bool = false // State for showing category picker
+    private let categories = ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"] // Example categories
 
     var body: some View {
         NavigationView {
@@ -43,31 +45,72 @@ struct GenerateView: View {
 
                         LazyVGrid(columns: columns, spacing: 20) {
                             ForEach(selectedOutfit.clothes) { item in
-                                VStack {
-                                    AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
-                                        if let image = phase.image {
-                                            image
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: 115, height: 115)
-                                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        } else {
-                                            Color.gray
+                                ZStack(alignment: .topLeading) {
+                                    VStack {
+                                        AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
+                                            if let image = phase.image {
+                                                image
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 115, height: 115)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            } else {
+                                                Color.gray
+                                            }
+                                        }
+                                        Button(action: {
+                                            itemToSwap = item
+                                            categoryToSwap = item.type
+                                            isSwapViewPresented = true
+                                        }) {
+                                            Image(systemName: "arrow.swap")
+                                                .foregroundColor(.blue)
+                                                .padding(.bottom, 45)
                                         }
                                     }
+
+                                    // Add a button to remove the clothing item
                                     Button(action: {
-                                        itemToSwap = item
-                                        categoryToSwap = item.type
-                                        isSwapViewPresented = true
+                                        removeItem(item)
                                     }) {
-                                        Image(systemName: "arrow.swap")
-                                            .foregroundColor(.blue)
-                                            .padding(.bottom, 45)
+                                        Image(systemName: "trash")
+                                            .foregroundColor(.red)
+                                            .padding(8)
+                                            .background(Color.white)
+                                            .clipShape(Circle())
+                                            .shadow(radius: 2)
                                     }
+                                    .padding(5) // Position the button at the top-left corner
                                 }
                             }
                         }
-                        
+
+                        // Add Item Button
+                        Button(action: {
+                            showCategoryPicker = true // Show the category picker
+                        }) {
+                            Text("Add Item")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.orange)
+                                .cornerRadius(10)
+                                .padding(.horizontal, 20)
+                        }
+                        .padding(.top, 10)
+                        .confirmationDialog("Select a Category", isPresented: $showCategoryPicker) {
+                            ForEach(categories, id: \.self) { category in
+                                Button(category) {
+                                    categoryToSwap = category // Set the selected category
+                                    itemToSwap = nil // Indicate that we're adding a new item
+                                    isSwapViewPresented = true // Show the SwapItemView
+                                }
+                            }
+                        } message: {
+                            Text("Choose a category to add an item")
+                        }
+
                         if !isOutfitConfirmed {
                             Button(action: {
                                 nextOutfit()
@@ -115,9 +158,25 @@ struct GenerateView: View {
             .navigationTitle(Text("Your Recommendation"))
             .sheet(isPresented: $isSwapViewPresented) {
                 SwapItemView(category: $categoryToSwap, onItemSelected: { newItem in
-                    swapItem(newItem: newItem)
+                    if itemToSwap == nil {
+                        // Add a new item
+                        addItem(newItem: newItem)
+                    } else {
+                        // Replace an existing item
+                        swapItem(newItem: newItem)
+                    }
                 })
             }
+        }
+    }
+
+    func addItem(newItem: ClothingItem) {
+        outfits[currentIndex].clothes.append(newItem)
+    }
+
+    func removeItem(_ item: ClothingItem) {
+        if let index = outfits[currentIndex].clothes.firstIndex(where: { $0.id == item.id }) {
+            outfits[currentIndex].clothes.remove(at: index)
         }
     }
 
@@ -170,7 +229,6 @@ struct GenerateView: View {
     }
     
     func swapItem(newItem: ClothingItem) {
-        // Replace itemToSwap with newItem in outfits[currentIndex]
         if let item_index = outfits[currentIndex].clothes.firstIndex(where: { $0.id == itemToSwap?.id }) {
             outfits[currentIndex].clothes[item_index] = newItem
         }
