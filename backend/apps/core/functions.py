@@ -152,7 +152,8 @@ def item_match(ranked):
             for k in ranked.keys():
                 if k not in [Clothing.ClothingType.DRESS, Clothing.ClothingType.TOP]:
                     best_item = color_match(ranked[k], target_colors)
-                    outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
+                    if best_item:
+                        outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
                 
             outfits.append({"clothes": outfit})
     
