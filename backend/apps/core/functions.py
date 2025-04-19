@@ -141,8 +141,6 @@ def item_match(ranked):
                     best_item = color_match(ranked[k], target_colors)
                     if best_item:
                         outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
-                
-            outfits.append({"clothes": outfit})
 
         elif len(ranked[Clothing.ClothingType.TOP]) > 0:
             top = ranked[Clothing.ClothingType.TOP].pop()
@@ -154,8 +152,17 @@ def item_match(ranked):
                     best_item = color_match(ranked[k], target_colors)
                     if best_item:
                         outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
-                
-            outfits.append({"clothes": outfit})
+                          
+        # Get weather from first garment (they should all have same weather)
+        base_weather = get_base_weather(ranked)
+        
+        if base_weather and base_weather in [Clothing.Weather.WINTER, Clothing.Weather.SPRING, Clothing.Weather.FALL]:
+            add_layerable_top(ranked, outfit)
+
+        if base_weather and base_weather in Clothing.Weather.WINTER:
+            add_outerwear(ranked, outfit)
+        
+        outfits.append({"clothes": outfit})
     
     return outfits
 
