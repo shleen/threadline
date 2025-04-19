@@ -20,7 +20,7 @@ struct TagView: View {
     @State private var selectedFit: String? = nil
     @State private var selectedOccasion: String? = nil
     @State private var selectedPrecip: String? = nil
-    @State private var winter: String? = nil
+    @State private var selectedWeather: String? = nil
     @State private var image: UIImage?
     @State private var isImagePickerPresented = false
     @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
@@ -30,17 +30,17 @@ struct TagView: View {
     @State private var isLoading = false
     @State private var isProcessingImage = false
 
-
-    let categories = ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]
-    let topSubtypes = ["ACTIVE", "T-SHIRT", "POLO", "BUTTON DOWN", "HOODIE", "SWEATER"]
-    let bottomSubtypes = ["ACTIVE", "JEANS", "PANTS", "SHORTS", "SKIRT"]
-    let outerwearSubtypes = ["JACKET", "COAT"]
-    let dressSubtypes = ["MINI", "MIDI", "MAXI"]
-    let shoesSubtypes = ["ACTIVE", "SNEAKERS", "BOOTS", "SANDALS & SLIDES"]
-    let fits = ["LOOSE", "FITTED", "TIGHT"]
-    let occasions = ["ACTIVE", "CASUAL", "FORMAL"]
-    let precips = ["RAIN", "SNOW"]
-    let winterOptions = ["Winter", "Not Winter"]
+    // Dynamic data fetched from the server
+    @State private var categories: [String] = []
+    @State private var topSubtypes: [String] = []
+    @State private var bottomSubtypes: [String] = []
+    @State private var outerwearSubtypes: [String] = []
+    @State private var dressSubtypes: [String] = []
+    @State private var shoesSubtypes: [String] = []
+    @State private var fits: [String] = []
+    @State private var occasions: [String] = []
+    @State private var precips: [String] = []
+    @State private var weatherOptions: [String] = []
 
     var body: some View {
         ZStack {
@@ -175,10 +175,10 @@ struct TagView: View {
                         .pickerStyle(MenuPickerStyle())
                         .padding()
                         
-                        Picker("Winter", selection: $winter) {
-                            Text("Select Winter Option").tag(String?.none)
-                            ForEach(winterOptions, id: \.self) { option in
-                                Text(option).tag(option == "Winter" ? "True" : "False")
+                        Picker("Select Weather", selection: $selectedWeather) {
+                            Text("Select Weather").tag(String?.none)
+                            ForEach(weatherOptions, id: \.self) { option in
+                                Text(option).tag(String?.some(option))
                             }
                         }
                         .pickerStyle(MenuPickerStyle())
@@ -235,9 +235,12 @@ struct TagView: View {
                     .padding()
                     .disabled(!isFormValid() || isLoading)
                 }
+                .onAppear {
+                    fetchCategories()
+                }
                 .sheet(isPresented: $isImagePickerPresented) {
                     ImagePickerCoordinator(image: $image, sourceType: sourceType) { selectedImage in
-                        self.image = selectedImage // <- optional if you want to show unprocessed image briefly
+                        self.image = selectedImage
                         processImageForColors(selectedImage)
                     }
                 }
@@ -273,6 +276,58 @@ struct TagView: View {
         }
     }
 
+    func fetchCategories() {
+        guard let url = URL(string: "\(urlStore.serverUrl)/categories/get") else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("Error fetching categories: \(error)")
+                return
+            }
+            
+            guard let data = data else { return }
+            // Debug: Print raw response data
+            if let rawResponse = String(data: data, encoding: .utf8) {
+                print("Raw response category: \(rawResponse)")
+            }
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    DispatchQueue.main.async {
+                        self.categories = json["type"] as? [String] ?? []
+                        self.fits = json["fit"] as? [String] ?? []
+                        self.occasions = json["occasion"] as? [String] ?? []
+                        self.precips = json["precip"] as? [String] ?? []
+                        self.weatherOptions = json["weather"] as? [String] ?? []
+                        
+                        if let subtypeArray = json["subtype"] as? [[String: Any]] {
+                            for subtype in subtypeArray {
+                                if let type = subtype["type"] as? String,
+                                   let subtypes = subtype["subtypes"] as? [String] {
+                                    switch type {
+                                    case "TOP":
+                                        self.topSubtypes = subtypes
+                                    case "BOTTOM":
+                                        self.bottomSubtypes = subtypes
+                                    case "OUTERWEAR":
+                                        self.outerwearSubtypes = subtypes
+                                    case "DRESS":
+                                        self.dressSubtypes = subtypes
+                                    case "SHOES":
+                                        self.shoesSubtypes = subtypes
+                                    default:
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch {
+                print("Error decoding categories JSON: \(error)")
+            }
+        }.resume()
+    }
+
     func getSubtypes(for category: String) -> [String] {
         switch category {
         case "TOP":
@@ -295,44 +350,88 @@ struct TagView: View {
                selectedSubtype != nil &&
                selectedFit != nil &&
                selectedOccasion != nil &&
-               winter != nil &&
+               selectedWeather != nil &&
                image != nil &&
                !isProcessingImage
+    }
+
+    func extractRGB(from color: RGBColor) -> [Int] {
+        return [color.red, color.green, color.blue]
     }
 
     func createClothingItem() {
         var multipart = MultipartRequest()
 
-        // Create form body
+        // Add required fields
         multipart.add(key: "username", value: username)
         multipart.add(key: "type", value: selectedCategory?.uppercased() ?? "")
-        multipart.add(key: "tags", value: tags.joined(separator: ","))
-        multipart.add(key: "subtype", value: selectedSubtype ?? "")
         multipart.add(key: "fit", value: selectedFit ?? "")
         multipart.add(key: "occasion", value: selectedOccasion ?? "")
-        multipart.add(key: "winter", value: winter ?? "")
+        multipart.add(key: "winter", value: selectedWeather == "WINTER" ? "True" : "False")
 
+        // Extract primary and secondary colors as RGB arrays
+        let primaryRGB = extractRGB(from: primaryColor)
+        let secondaryRGB = extractRGB(from: secondaryColor)
+
+        // Add primary and secondary colors
+        multipart.add(key: "red", value: "\(primaryRGB[0])")
+        multipart.add(key: "green", value: "\(primaryRGB[1])")
+        multipart.add(key: "blue", value: "\(primaryRGB[2])")
+        multipart.add(key: "red_secondary", value: "\(secondaryRGB[0])")
+        multipart.add(key: "green_secondary", value: "\(secondaryRGB[1])")
+        multipart.add(key: "blue_secondary", value: "\(secondaryRGB[2])")
+
+        // Add optional fields
+        if let selectedSubtype = selectedSubtype {
+            multipart.add(key: "subtype", value: selectedSubtype)
+        }
         if let selectedPrecip = selectedPrecip {
-            multipart.add(key: "precipitation", value: selectedPrecip)
+            multipart.add(key: "precip", value: selectedPrecip)
+        }
+        if !tags.isEmpty {
+            multipart.add(key: "tags", value: tags.joined(separator: ","))
         }
 
-        if let imageData = image?.pngData() {
-            multipart.add(
-                key: "image",
-                fileName: "image.png",
-                fileMimeType: "image/png",
-                fileData: imageData
-            )
+        // Add image
+        if let image = image {
+            if let imageData = image.pngData() {
+                multipart.add(
+                    key: "image",
+                    fileName: "image.png",
+                    fileMimeType: "image/png",
+                    fileData: imageData
+                )
+            } else if let imageData = image.jpegData(compressionQuality: 0.8) {
+                multipart.add(
+                    key: "image",
+                    fileName: "image.jpg",
+                    fileMimeType: "image/jpeg",
+                    fileData: imageData
+                )
+            } else {
+                print("Error: Unable to process image as PNG or JPEG.")
+                return
+            }
+        } else {
+            print("Error: Image is required but not provided.")
+            return
         }
 
-        multipart.add(key: "red", value: String(primaryColor.red))
-        multipart.add(key: "green", value: String(primaryColor.green))
-        multipart.add(key: "blue", value: String(primaryColor.blue))
-        multipart.add(key: "red_secondary", value: String(secondaryColor.red))
-        multipart.add(key: "green_secondary", value: String(secondaryColor.green))
-        multipart.add(key: "blue_secondary", value: String(secondaryColor.blue))
+        // Debug: Log the request payload
+        print("Request Payload:")
+        print("Username: \(username)")
+        print("Type: \(selectedCategory?.uppercased() ?? "")")
+        print("Fit: \(selectedFit ?? "")")
+        print("Occasion: \(selectedOccasion ?? "")")
+        print("Winter: \(selectedWeather == "WINTER" ? "True" : "False")")
+        print("Primary Color: \(primaryRGB)")
+        print("Secondary Color: \(secondaryRGB)")
+        print("Subtype: \(selectedSubtype ?? "None")")
+        print("Precipitation: \(selectedPrecip ?? "None")")
+        print("Tags: \(tags.joined(separator: ","))")
+        print("Image: \(image != nil ? "Attached" : "None")")
 
-        /// Create a regular HTTP URL request & use multipart components
+        // Create a regular HTTP URL request & use multipart components
         guard let url = URL(string: "\(urlStore.serverUrl)/clothing/create") else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -346,11 +445,16 @@ struct TagView: View {
                 return
             }
 
-            guard let httpResponse = response as? HTTPURLResponse else { return }
-            print("Response status code: \(httpResponse.statusCode)")
+            if let httpResponse = response as? HTTPURLResponse {
+                print("Response status code: \(httpResponse.statusCode)")
+            }
+
+            if let data = data, let responseString = String(data: data, encoding: .utf8) {
+                print("Response body: \(responseString)")
+            }
 
             DispatchQueue.main.async {
-                if httpResponse.statusCode == 200 {
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
                     showSuccessSnackbar = true
                     clearForm()
                     // Wait for snackbar animation before navigating
@@ -373,7 +477,7 @@ struct TagView: View {
         selectedFit = nil
         selectedOccasion = nil
         selectedPrecip = nil
-        winter = nil
+        selectedWeather = nil
         primaryColor = RGBColor(red: 128, green: 128, blue: 128)
         secondaryColor = RGBColor(red: 128, green: 128, blue: 128)
     }
