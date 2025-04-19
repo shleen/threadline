@@ -14,18 +14,17 @@ struct LogOutfitItemView: View {
 
     @State private var isSelected = false
 
-    let size: Double = 80
+    let size: Double = 100
     let item: LogOutfitItem
 
     var body: some View {
-        VStack() {
+        ZStack() {
             AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img_filename)")) { phase in
                 if let image = phase.image {
                     image
                         .resizable()
-                        .scaledToFill()
-                        .aspectRatio(1, contentMode: .fill)
-                        .frame(width: 90, height: 90)
+                        .scaledToFit()
+                        .frame(width: size, height: size)
                 } else if phase.error != nil {
                     Color.red // display an error placeholder
                 } else {
@@ -33,20 +32,17 @@ struct LogOutfitItemView: View {
                 }
             }
             .frame(width: size, height: size)
-            .clipped()
 
-            HStack() {
-                Spacer()
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? Color.accentColor : .secondary)
-                    .accessibility(label: Text(isSelected ? "Checked" : "Unchecked"))
-                    .imageScale(.large)
-                    .padding([.bottom, .trailing], 7)
-            }
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                .accessibility(label: Text(isSelected ? "Checked" : "Unchecked"))
+                .imageScale(.large)
+                .padding([.bottom, .trailing], 7)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         }
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: Color.gray.opacity(0.25), radius: 20, x: 0, y: 5)
+        .shadow(color: Color.gray.opacity(0.25), radius: 5, x: 0, y: 2)
         .padding(.top, 10)
         .onTapGesture {
             isSelected.toggle()
