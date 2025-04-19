@@ -27,6 +27,8 @@ struct TagView: View {
     @State private var showingOptions = false
     @State private var primaryColor: RGBColor = RGBColor(red: 128, green: 128, blue: 128)
     @State private var secondaryColor: RGBColor = RGBColor(red: 128, green: 128, blue: 128)
+    @State private var isLoading = false
+    @State private var isProcessingImage = false
 
 
     let categories = ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"]
@@ -54,6 +56,20 @@ struct TagView: View {
                                 .scaledToFit()
                                 .frame(height: 200)
                                 .padding()
+                                .overlay(alignment: .bottom) {
+                                    if isProcessingImage {
+                                        HStack {
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            Text("Removing background...")
+                                                .foregroundColor(.white)
+                                        }
+                                        .padding(4)
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.black.opacity(0.5))
+                                        .cornerRadius(8)
+                                    }
+                                }
                         } else {
                             VStack {
                                 Image(systemName: "photo")
@@ -196,17 +212,28 @@ struct TagView: View {
                     
                     Button(action: {
                         // Handle done action
+                        isLoading = true
                         createClothingItem()
                     }) {
-                        Text("Done")
-                            .padding(.horizontal)
-                            .padding(.vertical, 12)
-                            .background(isFormValid() ? Color.green : Color.gray)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
+                        if isLoading {
+                            ProgressView()
+                                .padding(.horizontal)
+                                .padding(.vertical, 12)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .background(Color.gray)
+                                .cornerRadius(8)
+                        }
+                        else {
+                            Text("Done")
+                                .padding(.horizontal)
+                                .padding(.vertical, 12)
+                                .background(isFormValid() ? Color.green : Color.gray)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
                     }
                     .padding()
-                    .disabled(!isFormValid())
+                    .disabled(!isFormValid() || isLoading)
                 }
                 .sheet(isPresented: $isImagePickerPresented) {
                     ImagePickerCoordinator(image: $image, sourceType: sourceType) { selectedImage in
@@ -269,7 +296,8 @@ struct TagView: View {
                selectedFit != nil &&
                selectedOccasion != nil &&
                winter != nil &&
-               image != nil
+               image != nil &&
+               !isProcessingImage
     }
 
     func createClothingItem() {
@@ -331,6 +359,7 @@ struct TagView: View {
                         showSuccessSnackbar = false
                     }
                 }
+                isLoading = false
             }
         }.resume()
     }
@@ -348,8 +377,9 @@ struct TagView: View {
         primaryColor = RGBColor(red: 128, green: 128, blue: 128)
         secondaryColor = RGBColor(red: 128, green: 128, blue: 128)
     }
-    
+
     func processImageForColors(_ image: UIImage) {
+        isProcessingImage = true
         var multipart = MultipartRequest()
         multipart.add(key: "username", value: username)
 
@@ -402,10 +432,12 @@ struct TagView: View {
 
                             print("Primary color: \(colors.first ?? [])")
                             print("Secondary color: \(colors.dropFirst().first ?? [])")
+                            isProcessingImage = false
                         }
                     }
                 } catch {
                     print("Failed to decode response: \(error)")
+                    isProcessingImage = false
                 }
             }.resume()
         }
