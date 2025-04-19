@@ -1,4 +1,5 @@
 # UM EECS441§3&4 W25 Team Threadline
+![threadline_logo](img/logo.png)
 
 | Video  |  Wiki |  Agile |
 |:-----:|:-----:|:--------:|
