@@ -102,7 +102,7 @@ def color_distance(color1, color2):
     """
     return math.sqrt(sum((c1 - c2) ** 2 for c1, c2 in zip(color1, color2))) #each pair of colors, find the squared diff and sum them
 
-def color_match(clothes,target_colors):
+def color_match(clothes, target_colors):
     """
     Find the clothes that best matches the target colors
     """ 
@@ -139,7 +139,8 @@ def item_match(ranked):
             for k in ranked.keys():
                 if k not in [Clothing.ClothingType.DRESS, Clothing.ClothingType.TOP,Clothing.ClothingType.BOTTOM]:
                     best_item = color_match(ranked[k], target_colors)
-                    outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
+                    if best_item:
+                        outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
                 
             outfits.append({"clothes": outfit})
 
