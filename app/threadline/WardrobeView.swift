@@ -120,13 +120,12 @@ struct ClothingDetailView: View {
                         detailRow("Fit", item.fit.capitalized)
                         detailRow("Occasion", item.occasion.capitalized)
                         
-                        
                         if !item.tags.isEmpty {
                             Text("Tags")
                                 .fontWeight(.medium)
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack {
-                                    ForEach(item.tags) { tag in
+                                    ForEach(item.tags, id: \.value) { tag in
                                         Text(tag.value)
                                             .font(.caption)
                                             .padding(.horizontal, 8)
