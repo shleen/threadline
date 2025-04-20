@@ -67,6 +67,14 @@ def utilization_query():
             FROM WORN_CLOTHES
         ) W
         GROUP BY W.type
+    ),
+    TYPE_PERCENT AS (
+        SELECT D.type AS util_type,
+        CASE 
+            WHEN (SELECT COUNT(*) FROM USER_CLOTHES WHERE type = D.type) = 0 THEN 0.0
+            ELSE ROUND(D.counts::numeric / (SELECT COUNT(*) FROM USER_CLOTHES WHERE type = D.type), 2)
+        END AS percent
+        FROM DISTINCT_COUNTS D
     )
 
     (SELECT 'TOTAL' AS util_type,
@@ -77,12 +85,15 @@ def utilization_query():
         END AS percent
         FROM DISTINCT_COUNTS D)
     UNION ALL
-    (SELECT D.type AS util_type,
-        CASE 
-            WHEN (SELECT COUNT(*) FROM USER_CLOTHES WHERE type = D.type) = 0 THEN 0.0
-            ELSE ROUND(D.counts::numeric / (SELECT COUNT(*) FROM USER_CLOTHES WHERE type = D.type), 2)
+    (SELECT T.util_type,
+       CASE
+         WHEN P.percent IS NULL THEN 0.0
+         ELSE P.percent
         END AS percent
-        FROM DISTINCT_COUNTS D);
+       FROM TYPE_PERCENT P
+ RIGHT JOIN (SELECT DISTINCT type AS util_type FROM USER_CLOTHES) T
+         ON T.util_type = P.util_type
+       );
     """
 
 
