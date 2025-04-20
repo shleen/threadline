@@ -275,7 +275,7 @@ struct LoadingFrameView: View {
         }
         .frame(width: 120, height: 180)
         .padding(8)
-        .background(Color(red: 0.957, green: 0.957, blue: 0.973))
+        .background(Color.background)
         .cornerRadius(8)
     }
 }
@@ -321,7 +321,7 @@ struct OutfitFrameView: View {
                 }
             }
             .frame(width: 120, height: 160)
-            .background(Color(red: 0.957, green: 0.957, blue: 0.973))
+            .background(Color.background)
             .cornerRadius(8)
         }
         .onTapGesture {
@@ -333,7 +333,7 @@ struct OutfitFrameView: View {
             }
         }
         .padding(8)
-        .background(Color(red: 0.957, green: 0.957, blue: 0.973))
+        .background(Color.background)
         .cornerRadius(8)
     }
 }
