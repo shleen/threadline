@@ -105,7 +105,7 @@ def color_distance(color1, color2):
 def color_match(clothes, target_colors):
     """
     Find the clothes that best matches the target colors
-    """ 
+    """
     if not clothes:
         return None
 
@@ -115,7 +115,7 @@ def color_match(clothes, target_colors):
         item_color = (item["color_lstar"], item["color_astar"], item["color_bstar"])
 
         min_distance = min(color_distance(item_color, target_color) for target_color in target_colors)
-        if min_distance < best_distance:    
+        if min_distance < best_distance:
             best_distance = min_distance
             best_item = item
 
@@ -152,10 +152,10 @@ def item_match(ranked):
                     best_item = color_match(ranked[k], target_colors)
                     if best_item:
                         outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
-                          
+
         # Get weather from first garment (they should all have same weather)
         base_weather = get_base_weather(ranked)
-        
+
         if base_weather and base_weather in [Clothing.Weather.WINTER, Clothing.Weather.SPRING, Clothing.Weather.FALL]:
             add_layerable_top(ranked, outfit)
 
@@ -164,7 +164,7 @@ def item_match(ranked):
 
         if len(outfit) > 0:
             outfits.append({"clothes": outfit})
-    
+
     return outfits
 
 
@@ -219,6 +219,8 @@ def compute_rewears(context):
 
 def compress_image(img_path, quality=70):
     img = Image.open(img_path)
+    width, height = img.size
+    img = img.resize((width // 2, height // 2))
     img.save(img_path, optimize=True, quality=quality)
     img.close()
 
