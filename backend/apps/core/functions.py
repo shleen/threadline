@@ -2,6 +2,7 @@ from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.uploadedfile import UploadedFile
 
+from .constants import *
 from .models import *
 from .queries import *
 from .utils import *
@@ -124,34 +125,30 @@ def color_match(clothes, target_colors):
 
 def item_match(ranked):
     """
-    Matches clothes from ranking stage to form outfits. The full
-    implementation is an MVP feature so for skeletal it is minimial
-    and will just create up to 5 outfits of top, bottom, and shoes.
+    Matches clothes from ranking stage based on color to form outfits. Each outfit
+    is either one that includes a dress or a (top + bottom). A final layering stage
+    adds a layer if the weather calls for it.
     """
     outfits = []
     for i in range(5):
+        valid_outfit_types = [t for t in OUTFIT_TYPES if len(ranked[t["anchor"]])]
+
+        if len(valid_outfit_types) == 0:
+            break
+
         outfit = []
-        if (len(ranked[Clothing.ClothingType.DRESS]) > 0 and random.randint(0,1)):
-            dress = ranked[Clothing.ClothingType.DRESS].pop()
-            outfit.append({"id": dress["id"], "img": dress["img_filename"], "type": Clothing.ClothingType.DRESS})
-            target_colors = get_target_colors((dress["color_lstar"], dress["color_astar"], dress["color_bstar"]))
 
-            for k in ranked.keys():
-                if k not in [Clothing.ClothingType.DRESS, Clothing.ClothingType.TOP,Clothing.ClothingType.BOTTOM]:
-                    best_item = color_match(ranked[k], target_colors)
-                    if best_item:
-                        outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
+        outfit_type = random.choice(valid_outfit_types)
+        anchor = ranked[outfit_type["anchor"]].pop()
+        outfit.append({"id": anchor["id"], "img": anchor["img_filename"], "type": anchor["type"]})
 
-        elif len(ranked[Clothing.ClothingType.TOP]) > 0:
-            top = ranked[Clothing.ClothingType.TOP].pop()
-            outfit.append({"id": top["id"], "img": top["img_filename"], "type": Clothing.ClothingType.TOP})
-            target_colors = get_target_colors((top["color_lstar"], top["color_astar"], top["color_bstar"]))
+        target_colors = get_target_colors((anchor["color_lstar"], anchor["color_astar"], anchor["color_bstar"]))
 
-            for k in ranked.keys():
-                if k not in [Clothing.ClothingType.DRESS, Clothing.ClothingType.TOP]:
-                    best_item = color_match(ranked[k], target_colors)
-                    if best_item:
-                        outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
+        for k in ranked.keys():
+            if k not in [*outfit_type["exclusions"], outfit_type["anchor"]]:
+                best_item = color_match(ranked[k], target_colors)
+                if best_item:
+                    outfit.append({"id": best_item["id"], "img": best_item["img_filename"], "type": k})
 
         # Get weather from first garment (they should all have same weather)
         base_weather = get_base_weather(ranked)
