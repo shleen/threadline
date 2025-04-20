@@ -43,47 +43,51 @@ struct GenerateView: View {
                         let selectedOutfit = outfits[currentIndex]
                         let columns = Array(repeating: GridItem(.flexible()), count: selectedOutfit.clothes.count)
 
-                        LazyVGrid(columns: columns, spacing: 20) {
-                            ForEach(selectedOutfit.clothes) { item in
-                                ZStack(alignment: .topLeading) {
-                                    VStack {
-                                        AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
-                                            if let image = phase.image {
-                                                image
-                                                    .resizable()
-                                                    .scaledToFit()
-                                                    .frame(width: 115, height: 115)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                            } else {
-                                                Color.gray
+//                        LazyVGrid(columns: columns, spacing: 20) {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack {
+                                ForEach(selectedOutfit.clothes) { item in
+                                    ZStack(alignment: .topLeading) {
+                                        VStack {
+                                            AsyncImage(url: URL(string: "\(urlStore.r2BucketUrl)\(item.img)")) { phase in
+                                                if let image = phase.image {
+                                                    image
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .frame(width: 115, height: 115)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                } else {
+                                                    Color.gray
+                                                }
+                                            }
+                                            Button(action: {
+                                                itemToSwap = item
+                                                categoryToSwap = item.type
+                                                isSwapViewPresented = true
+                                            }) {
+                                                Image(systemName: "arrow.swap")
+                                                    .foregroundColor(.blue)
+                                                    .padding(.bottom, 45)
                                             }
                                         }
+                                        
+                                        // Add a button to remove the clothing item
                                         Button(action: {
-                                            itemToSwap = item
-                                            categoryToSwap = item.type
-                                            isSwapViewPresented = true
+                                            removeItem(item)
                                         }) {
-                                            Image(systemName: "arrow.swap")
-                                                .foregroundColor(.blue)
-                                                .padding(.bottom, 45)
+                                            Image(systemName: "trash")
+                                                .foregroundColor(.red)
+                                                .padding(8)
+                                                .background(Color.white)
+                                                .clipShape(Circle())
+                                                .shadow(radius: 2)
                                         }
+                                        .padding(5) // Position the button at the top-left corner
                                     }
-
-                                    // Add a button to remove the clothing item
-                                    Button(action: {
-                                        removeItem(item)
-                                    }) {
-                                        Image(systemName: "trash")
-                                            .foregroundColor(.red)
-                                            .padding(8)
-                                            .background(Color.white)
-                                            .clipShape(Circle())
-                                            .shadow(radius: 2)
-                                    }
-                                    .padding(5) // Position the button at the top-left corner
                                 }
                             }
                         }
+                       // }
 
                         // Add Item Button
                         Button(action: {
@@ -124,6 +128,7 @@ struct GenerateView: View {
                                     .cornerRadius(10)
                                     .padding(.horizontal, 20)
                             }
+                            .padding(.top, 10)
 
                             Button(action: {
                                 confirmOutfit()
