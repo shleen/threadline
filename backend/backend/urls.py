@@ -24,6 +24,8 @@ urlpatterns = [
     path('recommendation/get', views.get_recommendations),
     path('outfits/get', views.get_prev_outfits),
     path('outfit/post', views.log_outfit),
+    path('outfit/like', views.like_outfit),
+    path('outfit/unlike', views.unlike_outfit),
     path('utilization/get', views.get_utilization),
     path('image/process', views.process_image),
     path('categories/get', views.get_categories),
