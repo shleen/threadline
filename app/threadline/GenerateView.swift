@@ -41,9 +41,7 @@ struct GenerateView: View {
                 } else {
                     VStack {
                         let selectedOutfit = outfits[currentIndex]
-                        let columns = Array(repeating: GridItem(.flexible()), count: selectedOutfit.clothes.count)
 
-//                        LazyVGrid(columns: columns, spacing: 20) {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack {
                                 ForEach(selectedOutfit.clothes) { item in
@@ -87,7 +85,6 @@ struct GenerateView: View {
                                 }
                             }
                         }
-                       // }
 
                         // Add Item Button
                         Button(action: {
