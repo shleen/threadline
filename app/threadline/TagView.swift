@@ -10,6 +10,8 @@ import SwiftUI
 struct TagView: View {
     @AppStorage("username") private var username: String = ""
     @Environment(UrlStore.self) private var urlStore
+    
+    @FocusState private var keyboard: Bool
 
     @State private var tags: [String] = []
     @State private var newTag: String = ""
@@ -112,6 +114,7 @@ struct TagView: View {
                         TextField("Enter tag", text: $newTag)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .padding(.horizontal)
+                            .focused($keyboard)
                         
                         Button(action: {
                             if !newTag.isEmpty {
@@ -272,6 +275,9 @@ struct TagView: View {
                 .navigationDestination(isPresented: $navigateToWardrobe) {
                     WardrobeView()
                 }
+            }
+            .onTapGesture {
+                keyboard.toggle()
             }
         }
     }
