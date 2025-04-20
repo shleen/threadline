@@ -161,8 +161,9 @@ def item_match(ranked):
 
         if base_weather and base_weather in Clothing.Weather.WINTER:
             add_outerwear(ranked, outfit)
-        
-        outfits.append({"clothes": outfit})
+
+        if len(outfit) > 0:
+            outfits.append({"clothes": outfit})
     
     return outfits
 
