@@ -145,6 +145,14 @@ class OutfitItem(models.Model):
 
     outfit = models.ForeignKey(Outfit, on_delete=models.CASCADE)
 
+class OutfitLike(models.Model):
+    outfit = models.ForeignKey(Outfit, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('outfit', 'user')  # Prevent duplicate likes
+
 ### Signal handlers
 @receiver(post_delete, sender=Clothing)
 def clothing_post_delete(sender, instance, **kwargs):

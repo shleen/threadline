@@ -311,7 +311,9 @@ struct OutfitFrameView: View {
                                 .resizable()
                                 .scaledToFill()
                         } else if phase.error != nil {
-                            Color.red // display an error placeholder
+                            // display an error placeholder
+                            Image(systemName: "exclamationmark.triangle")
+                                .foregroundColor(.gray)
                         } else {
                             ProgressView()
                         }

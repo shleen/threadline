@@ -10,7 +10,7 @@ from .decorators import require_method
 from .functions import *
 from .utils import *
 from .images import IMAGE_BUCKET, r2
-from .models import Clothing, User, Tags, Outfit, OutfitItem
+from .models import Clothing, User, Tags, Outfit, OutfitItem, OutfitLike
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -378,6 +378,13 @@ def get_feed(request):
     # Get pagination parameters
     cursor = request.GET.get('cursor')
     page_size = int(request.GET.get('page_size', 10))
+    username = request.GET.get('username')
+
+    if not username:
+        return HttpResponseBadRequest("Required field 'username' not provided.")
+
+    # Check if user exists
+    user = get_object_or_404(User, username=username)
 
     # Base query starting from OutfitItem
     outfit_items_query = OutfitItem.objects.select_related(
@@ -401,6 +408,15 @@ def get_feed(request):
     # Get outfit items and group by outfit
     outfit_items = outfit_items_query[:page_size * 10]  # Get enough items to fill page_size outfits
 
+    # Get all outfit IDs for the current page
+    outfit_ids = [item.outfit.id for item in outfit_items]
+
+    # Get likes for these outfits by the current user
+    user_likes = set(OutfitLike.objects.filter(
+        outfit_id__in=outfit_ids,
+        user=user
+    ).values_list('outfit_id', flat=True))
+
     # Group by outfit and format response
     feed_items = []
     current_outfit = None
@@ -418,7 +434,8 @@ def get_feed(request):
                 'img_filename': current_outfit.img_filename,
                 'date_worn': current_outfit.date_worn.isoformat(),
                 'username': current_outfit.outfititem_set.first().clothing.user.username,
-                'clothing_items': current_clothing_items
+                'clothing_items': current_clothing_items,
+                'is_liked': current_outfit.id in user_likes
             })
 
             # Start new outfit
@@ -455,7 +472,8 @@ def get_feed(request):
             'img_filename': current_outfit.img_filename,
             'date_worn': current_outfit.date_worn.isoformat(),
             'username': current_outfit.outfititem_set.first().clothing.user.username,
-            'clothing_items': current_clothing_items
+            'clothing_items': current_clothing_items,
+            'is_liked': current_outfit.id in user_likes
         })
 
     # Get next cursor from the last item
@@ -467,3 +485,43 @@ def get_feed(request):
         'outfits': feed_items,
         'next_cursor': next_cursor
     })
+
+@csrf_exempt
+@require_method('POST')
+def like_outfit(request):
+    try:
+        username = request.POST.get('username')
+        outfit_id = request.POST.get('outfit_id')
+
+        if not username or not outfit_id:
+            return HttpResponseBadRequest("Required fields 'username' and 'outfit_id' not provided.")
+
+        user = get_object_or_404(User, username=username)
+        outfit = get_object_or_404(Outfit, id=outfit_id)
+
+        # Create like if it doesn't exist
+        OutfitLike.objects.get_or_create(outfit=outfit, user=user)
+        return HttpResponse(status=200)
+    except Exception as e:
+        return HttpResponseBadRequest(f"An error occurred: {str(e)}")
+
+@csrf_exempt
+@require_method('POST')
+def unlike_outfit(request):
+    try:
+        username = request.POST.get('username')
+        outfit_id = request.POST.get('outfit_id')
+
+        if not username or not outfit_id:
+            return HttpResponseBadRequest("Required fields 'username' and 'outfit_id' not provided.")
+
+        user = get_object_or_404(User, username=username)
+        outfit = get_object_or_404(Outfit, id=outfit_id)
+
+        # Delete like if it exists
+        like = OutfitLike.objects.filter(outfit=outfit, user=user).first()
+        if like:
+            like.delete()
+        return HttpResponse(status=200)
+    except Exception as e:
+        return HttpResponseBadRequest(f"An error occurred: {str(e)}")

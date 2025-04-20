@@ -13,6 +13,7 @@ struct FeedItem: Codable, Identifiable {
     let date_worn: String
     let username: String
     let clothing_items: [Clothing]
+    let is_liked: Bool
 }
 
 struct FeedResponse: Codable {
@@ -66,7 +67,7 @@ struct FeedView: View {
     }
     
     private func loadInitialOutfits() {
-        guard let url = URL(string: "\(urlStore.serverUrl)/feed/get?page_size=10") else { return }
+        guard let url = URL(string: "\(urlStore.serverUrl)/feed/get?page_size=10&username=\(username)") else { return }
         
         isLoading = true
         URLSession.shared.dataTask(with: url) { data, response, error in
@@ -89,7 +90,7 @@ struct FeedView: View {
     
     private func loadMoreOutfits() {
         guard !isLoading, hasMore, let cursor = nextCursor,
-              let url = URL(string: "\(urlStore.serverUrl)/feed/get?cursor=\(cursor)&page_size=10") else { return }
+              let url = URL(string: "\(urlStore.serverUrl)/feed/get?cursor=\(cursor)&page_size=10&username=\(username)") else { return }
         
         isLoading = true
         URLSession.shared.dataTask(with: url) { data, response, error in
@@ -116,7 +117,14 @@ struct FeedItemView: View {
 
     @AppStorage("username") private var username: String = ""
     @Environment(UrlStore.self) private var urlStore
-    
+
+    @State var isLiked: Bool
+
+    init(outfit: FeedItem) {
+        self.outfit = outfit
+        _isLiked = State(initialValue: outfit.is_liked)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Header with username and date
@@ -158,7 +166,25 @@ struct FeedItemView: View {
                     EmptyView()
                 }
             }
-            
+
+            HStack {
+                Spacer()
+                Button(action: {
+                    toggleLike()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: isLiked ? "heart.fill" : "heart")
+                            .foregroundColor(isLiked ? .red : .gray)
+                        Text(isLiked ? "Liked" : "Like")
+                            .foregroundColor(isLiked ? .red : .gray)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(isLiked ? Color.red.opacity(0.1) : Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+                }
+            }
+
             // Clothing items grid
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -194,6 +220,26 @@ struct FeedItemView: View {
         .shadow(color: Color.gray.opacity(0.2), radius: 10, x: 0, y: 5)
     }
     
+    private func toggleLike() {
+        let endpoint = isLiked ? "unlike" : "like"
+        guard let url = URL(string: "\(urlStore.serverUrl)/outfit/\(endpoint)") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+
+        let body = "username=\(username)&outfit_id=\(outfit.id)"
+        request.httpBody = body.data(using: .utf8)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                DispatchQueue.main.async {
+                    isLiked = !isLiked
+                }
+            }
+        }.resume()
+    }
+
     private func formatDate(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
