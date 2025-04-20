@@ -217,10 +217,13 @@ def compute_rewears(context):
     return execute_read_query(rewears_query(context), [context["username"]])
 
 
-def compress_image(img_path, quality=70):
-    img = Image.open(img_path)
-    img.save(img_path, optimize=True, quality=quality)
-    img.close()
+def compress_image(img, max_dim=1024):
+    w, h = img.size
+    scale = max_dim / max(w, h)
+    if scale < 1:
+        img.thumbnail((int(w * scale), int(h * scale)), Image.LANCZOS)
+
+    return img
 
 # Returns file_path of the image in /tmp
 def save_image_in_tmp(image: UploadedFile, filename):
@@ -235,10 +238,8 @@ def save_image_in_tmp(image: UploadedFile, filename):
     return file_path
 
 # Overwrites image file with a version with the background removed
-def img_bg_rm(file_path):
-    input = Image.open(file_path)
-    output = remove(input)
-    output.save(file_path)
+def img_bg_rm(img):
+    return remove(img)
 
 # Expects path to a png image with background removed
 # Returns List of tuples representing RGB values

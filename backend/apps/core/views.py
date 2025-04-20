@@ -314,13 +314,16 @@ def process_image(request):
     filename = f"{username}_{round(time.time()*1000)}.{filetype}"
     image_path = save_image_in_tmp(image, filename)
 
-    #remove image background
-    img_bg_rm(image_path)
+    # Compress image and remove background
+    img = Image.open(image_path)
+
+    img = compress_image(img)
+    img = img_bg_rm(img)
+
+    img.save(image_path)
+    img.close()
 
     color_palette = extract_palette(image_path)[:2]
-
-    # Compress image
-    compress_image(image_path)
 
     json_data = json.dumps(color_palette)
 
