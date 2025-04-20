@@ -109,8 +109,8 @@ struct LogOutfitView: View {
                             LogOutfitItemView(selectedItems: $selectedItems, item: item)
                         }
                     }
+                    .padding(.horizontal, 16)
                 }
-                .padding(.horizontal, 16)
             }
             .sheet(isPresented: $isImagePickerPresented) {
                 ImagePickerCoordinator(image: $image, sourceType: sourceType) { _ in }

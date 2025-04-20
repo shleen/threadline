@@ -196,36 +196,25 @@ struct GenerateView: View {
             return
         }
 
-        let payload: [String: Any] = [
-            "username": username,
-            "clothing_ids": selectedOutfit.clothes.map { $0.id }
-        ]
+        var multipart = MultipartRequest()
+        multipart.add(key: "username", value: username)
+        multipart.add(key: "clothing_ids", value: Array(selectedOutfit.clothes).map { String($0.id) }.joined(separator: ","))
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
-        } catch {
-            print("Error serializing JSON: \(error)")
-            return
-        }
-
-        isOutfitConfirmed = true
+        request.setValue(multipart.httpContentTypeHeadeValue, forHTTPHeaderField: "Content-Type")
+        request.httpBody = multipart.httpBody
 
         // Send confirmed outfit to the server
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                print("Error sending confirmed outfit: \(error)")
+        Task(priority: .background) {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            isOutfitConfirmed = true
+            if let httpStatus = response as? HTTPURLResponse, httpStatus.statusCode != 200 {
+                print("/outfit/post: HTTP STATUS: \(httpStatus.statusCode)")
                 return
             }
-            if let response = response as? HTTPURLResponse, response.statusCode == 200 {
-                print("Outfit confirmed successfully")
-            } else {
-                print("Failed to confirm outfit")
-            }
-        }.resume()
+        }
     }
     
     func swapItem(newItem: ClothingItem) {
