@@ -25,8 +25,7 @@ struct GenerateView: View {
     @State private var isLoading: Bool = false
     @State private var showError: Bool = false
     @State private var showCategoryPicker: Bool = false // State for showing category picker
-    private let categories = ["TOP", "BOTTOM", "OUTERWEAR", "DRESS", "SHOES"] // Example categories
-
+    @State private var categories: [String] = []
     var body: some View {
         NavigationView {
             ZStack {
@@ -169,7 +168,32 @@ struct GenerateView: View {
                     }
                 })
             }
+            .onAppear {
+                fetchCategories()
+            }
         }
+    }
+
+    func fetchCategories() {
+        guard let url = URL(string: "\(urlStore.serverUrl)/categories/get") else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("Error fetching categories: \(error)")
+                return
+            }
+            
+            guard let data = data else { return }
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    DispatchQueue.main.async {
+                        self.categories = json["type"] as? [String] ?? []
+                    }
+                }
+            } catch {
+                print("Error decoding categories JSON: \(error)")
+            }
+        }.resume()
     }
 
     func addItem(newItem: ClothingItem) {
