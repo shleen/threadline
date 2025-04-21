@@ -34,11 +34,7 @@ struct TagView: View {
 
     // Dynamic data fetched from the server
     @State private var categories: [String] = []
-    @State private var topSubtypes: [String] = []
-    @State private var bottomSubtypes: [String] = []
-    @State private var outerwearSubtypes: [String] = []
-    @State private var dressSubtypes: [String] = []
-    @State private var shoesSubtypes: [String] = []
+    @State private var subtypes: [String: [String]] = [:] // Dictionary to store subtypes dynamically
     @State private var fits: [String] = []
     @State private var occasions: [String] = []
     @State private var precips: [String] = []
@@ -308,21 +304,8 @@ struct TagView: View {
                         if let subtypeArray = json["subtype"] as? [[String: Any]] {
                             for subtype in subtypeArray {
                                 if let type = subtype["type"] as? String,
-                                   let subtypes = subtype["subtypes"] as? [String] {
-                                    switch type {
-                                    case "TOP":
-                                        self.topSubtypes = subtypes
-                                    case "BOTTOM":
-                                        self.bottomSubtypes = subtypes
-                                    case "OUTERWEAR":
-                                        self.outerwearSubtypes = subtypes
-                                    case "DRESS":
-                                        self.dressSubtypes = subtypes
-                                    case "SHOES":
-                                        self.shoesSubtypes = subtypes
-                                    default:
-                                        break
-                                    }
+                                    let subtypes = subtype["subtypes"] as? [String] {
+                                    self.subtypes[type] = subtypes
                                 }
                             }
                         }
@@ -335,20 +318,7 @@ struct TagView: View {
     }
 
     func getSubtypes(for category: String) -> [String] {
-        switch category {
-        case "TOP":
-            return topSubtypes
-        case "BOTTOM":
-            return bottomSubtypes
-        case "OUTERWEAR":
-            return outerwearSubtypes
-        case "DRESS":
-            return dressSubtypes
-        case "SHOES":
-            return shoesSubtypes
-        default:
-            return []
-        }
+        return subtypes[category] ?? []
     }
 
     func isFormValid() -> Bool {
