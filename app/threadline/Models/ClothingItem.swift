@@ -19,8 +19,8 @@ struct Clothing: Codable, Identifiable {
     let weather: String
     let created_at: String
     let tags: [Tag]
-    let colors_primary: [Int]
-    let colors_secondary: [Int]
+    // let colors_primary: [Int]
+    // let colors_secondary: [Int]
     
 }
 struct Tag: Codable, Identifiable {
