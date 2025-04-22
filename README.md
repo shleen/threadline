@@ -8,6 +8,6 @@
 ![Elevator Pitch](https://raw.githubusercontent.com/shleen/threadline/refs/heads/main/img/pitch.png)
 ![Team](https://raw.githubusercontent.com/shleen/threadline/refs/heads/main/img/team_roster.png)
 
-[video]: https://youtu.be/sample
+[video]: https://youtu.be/vPpflvTfnZc
 [wiki]: https://github.com/shleen/threadline/wiki
 [agile]: https://trello.com/b/gpPH5RcO/threadline
